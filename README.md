@@ -107,9 +107,3 @@ com.local.claude-usage.sdPlugin/
   ui/inspector.html settings panel (metric, thresholds, User-Agent)
   imgs/             icons
 ```
-
-### Want actual token counts / $ cost too?
-The OAuth endpoint only exposes **percentages**. Raw token counts and dollar cost
-live in Claude Code's local logs (`%USERPROFILE%\.claude\projects\**\*.jsonl`).
-A second metric type that parses those (à la `ccusage`) can be added to this same
-plugin — say the word and I'll wire up a "tokens today" / "session cost" key.
