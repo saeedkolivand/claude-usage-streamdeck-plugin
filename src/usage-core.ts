@@ -215,16 +215,35 @@ const PRICING = {
   haiku: { in: 1 / 1e6, out: 5 / 1e6, cr: 0.1 / 1e6, cw: 1.25 / 1e6 },
 };
 
-export function rateFor(model: string): (typeof PRICING)["opus"] {
+export type ModelFamily = "opus" | "opus-legacy" | "sonnet" | "haiku" | "unknown";
+
+// Reduce whatever model id Claude Code recorded in its logs to just the family
+// (e.g. "claude-opus-4-6-2026..." -> "opus"). Version-agnostic on purpose, so
+// new releases within a family are picked up automatically without code changes.
+export function modelFamily(model: string): ModelFamily {
   const m = (model || "").toLowerCase();
   if (m.includes("opus")) {
-    // Opus 4.5/4.6/4.7 (and any 5.x) use current pricing; Opus 4 / 4.0 / 4.1 are pricier.
-    if (/opus-4-[5-9]/.test(m) || /opus-[5-9]/.test(m)) return PRICING.opus;
-    return PRICING.opusLegacy;
+    // Opus 4.5/4.6/4.7+ (and any 5.x) use current pricing; Opus 4 / 4.0 / 4.1 cost more.
+    return /opus-4-[5-9]/.test(m) || /opus-[5-9]/.test(m) ? "opus" : "opus-legacy";
   }
-  if (m.includes("haiku")) return PRICING.haiku;
-  if (m.includes("sonnet")) return PRICING.sonnet;
-  return PRICING.sonnet; // sensible default
+  if (m.includes("sonnet")) return "sonnet";
+  if (m.includes("haiku")) return "haiku";
+  return "unknown";
+}
+
+export function rateFor(model: string): (typeof PRICING)["opus"] {
+  switch (modelFamily(model)) {
+    case "opus":
+      return PRICING.opus;
+    case "opus-legacy":
+      return PRICING.opusLegacy;
+    case "haiku":
+      return PRICING.haiku;
+    case "sonnet":
+      return PRICING.sonnet;
+    default:
+      return PRICING.sonnet; // unknown / future family -> assume Sonnet-class
+  }
 }
 
 export function computeCost(u: Record<string, unknown>, model: string): number {

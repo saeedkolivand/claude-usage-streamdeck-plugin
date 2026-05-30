@@ -17418,15 +17418,28 @@ var PRICING = {
   sonnet: { in: 3 / 1e6, out: 15 / 1e6, cr: 0.3 / 1e6, cw: 3.75 / 1e6 },
   haiku: { in: 1 / 1e6, out: 5 / 1e6, cr: 0.1 / 1e6, cw: 1.25 / 1e6 }
 };
-function rateFor(model) {
+function modelFamily(model) {
   const m = (model || "").toLowerCase();
   if (m.includes("opus")) {
-    if (/opus-4-[5-9]/.test(m) || /opus-[5-9]/.test(m)) return PRICING.opus;
-    return PRICING.opusLegacy;
+    return /opus-4-[5-9]/.test(m) || /opus-[5-9]/.test(m) ? "opus" : "opus-legacy";
   }
-  if (m.includes("haiku")) return PRICING.haiku;
-  if (m.includes("sonnet")) return PRICING.sonnet;
-  return PRICING.sonnet;
+  if (m.includes("sonnet")) return "sonnet";
+  if (m.includes("haiku")) return "haiku";
+  return "unknown";
+}
+function rateFor(model) {
+  switch (modelFamily(model)) {
+    case "opus":
+      return PRICING.opus;
+    case "opus-legacy":
+      return PRICING.opusLegacy;
+    case "haiku":
+      return PRICING.haiku;
+    case "sonnet":
+      return PRICING.sonnet;
+    default:
+      return PRICING.sonnet;
+  }
 }
 function computeCost(u, model) {
   const r = rateFor(model);

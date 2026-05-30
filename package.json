@@ -8,7 +8,8 @@
     "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.local.claude-usage.sdPlugin/bin/plugin.js"
   },
   "dependencies": {
-    "@elgato/streamdeck": "^2.1.0"
+    "@elgato/streamdeck": "^2.1.0",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@elgato/cli": "^1.7.4",

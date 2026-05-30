@@ -1,5 +1,7 @@
 # Claude Usage — Stream Deck plugin
 
+![Claude Usage keys on a Stream Deck: Session, Weekly and Opus limit gauges on the top row; Tokens and Cost tiles on the bottom row](preview.png)
+
 Shows your Claude usage on Stream Deck keys. One configurable action; drop it on
 as many keys as you like and pick a metric per key. Two families of metrics:
 
@@ -33,6 +35,13 @@ That's it. Keys populate within a second or two of being placed.
 > Windows, or the **login Keychain** (`Claude Code-credentials`) on macOS, and
 > never sends it anywhere except Anthropic's own usage endpoint. Token/cost
 > metrics additionally read the local transcripts under `~/.claude/projects/`.
+
+**Platform support:** the packaged plugin installs on the official Elgato Stream
+Deck app, which runs on **Windows 10+ and macOS 12+**. There is no official
+Stream Deck app for **Linux**, so the `.streamDeckPlugin` can't be installed
+there — but the data layer is plain Node and works on Linux (token from
+`~/.claude/.credentials.json`, logs from `~/.claude/projects/`), so the verify
+command below and the source build both run fine on Linux.
 
 ---
 
@@ -75,6 +84,16 @@ curl -s https://api.anthropic.com/api/oauth/usage \
   -H "User-Agent: claude-code/2.0.31" | python3 -m json.tool
 ```
 
+On **Linux** (token comes from the file, same as Windows):
+
+```bash
+TOKEN=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.claude/.credentials.json")))["claudeAiOauth"]["accessToken"])')
+curl -s https://api.anthropic.com/api/oauth/usage \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "anthropic-beta: oauth-2025-04-20" \
+  -H "User-Agent: claude-code/2.0.31" | python3 -m json.tool
+```
+
 ---
 
 ## Notes & gotchas
@@ -107,8 +126,12 @@ curl -s https://api.anthropic.com/api/oauth/usage \
     "equivalent API spend"*, useful for relative sense, not a real charge.
   - "Session" = your most-recently-active Claude Code conversation; "today" is by
     local calendar day. Entries are de-duplicated by request id.
-  - Pricing for the compute fallback lives in `PRICING` in `src/usage-core.ts` —
-    edit it if Anthropic changes rates.
+  - **Model pricing is version-proof.** The model is read per message from your
+    own logs (`message.model`) and reduced to a family — `opus`, `sonnet`, or
+    `haiku` — not a hardcoded model id, so new releases (e.g. a future
+    `opus-4-9`) map to the right rate automatically. Only the per-family rates in
+    `PRICING` (`src/usage-core.ts`) need editing if Anthropic changes prices; an
+    unrecognized family falls back to Sonnet-class pricing.
 
 ---
 
@@ -140,3 +163,40 @@ com.local.claude-usage.sdPlugin/
 To tweak the gauge look edit `svgKey`, the token/cost tiles edit `svgStat`, the
 metric definitions edit `METRICS` / the `LOG_METRICS` set in `plugin.ts`, and the
 cost fallback rates edit `PRICING` — all in `src/usage-core.ts`.
+
+The build commands above are identical on Windows (PowerShell), macOS, and Linux
+— only `make_icons.py` needs Python with Pillow (`pip install pillow`).
+
+---
+
+## Publish to GitHub + attach the build to a Release
+
+Create the repo and push (you need the [GitHub CLI](https://cli.github.com),
+`gh auth login` once):
+
+```bash
+git init
+git branch -M main
+git add .
+git commit -m "Claude Usage Stream Deck plugin"
+gh repo create claude-usage-streamdeck --public --source=. --remote=origin --push
+```
+
+Then publish the installable `.streamDeckPlugin` as a release asset so others can
+download it without building. Either attach the file you already have, or pack a
+fresh one first:
+
+```bash
+# (optional) build a fresh package into ./dist
+npx streamdeck pack com.local.claude-usage.sdPlugin --output dist --force
+
+# create a tagged release and upload the installable
+gh release create v1.1.0 \
+  dist/com.local.claude-usage.streamDeckPlugin \
+  --title "v1.1.0" \
+  --notes "Session/Weekly limit gauges + tokens/cost tiles. Windows + macOS."
+```
+
+On Windows PowerShell it's the same commands (drop the trailing `\` line breaks
+or keep them as PowerShell backticks `` ` ``). To cut a later release, bump
+`Version` in `manifest.json`, re-pack, and run `gh release create vX.Y.Z …` again.
