@@ -31,7 +31,14 @@ type Settings = {
 };
 
 const ACCENT = "#d97757"; // Claude coral, used on stat tiles
-const LOG_METRICS = new Set(["tokens_today", "cost_today", "tokens_session", "cost_session"]);
+const LOG_METRICS = new Set([
+  "tokens_today",
+  "cost_today",
+  "tokens_week",
+  "cost_week",
+  "tokens_session",
+  "cost_session",
+]);
 
 // Every visible key instance, so the refresh loop can repaint all of them.
 const visible = new Set<any>();
@@ -81,6 +88,10 @@ async function drawStat(act: any, metric: string): Promise<void> {
     label = "Tokens"; value = fmtTokens(stats.todayTokens); sub = "today";
   } else if (metric === "cost_today") {
     label = "Cost"; value = fmtCost(stats.todayCost); sub = "today";
+  } else if (metric === "tokens_week") {
+    label = "Tokens"; value = fmtTokens(stats.weekTokens); sub = "7 days";
+  } else if (metric === "cost_week") {
+    label = "Cost"; value = fmtCost(stats.weekCost); sub = "7 days";
   } else if (metric === "tokens_session") {
     label = "Tokens"; value = fmtTokens(stats.sessionTokens); sub = "session";
   } else if (metric === "cost_session") {

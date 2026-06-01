@@ -2,7 +2,7 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.local.claude-usage",
   "Name": "Claude Usage",
-  "Version": "1.1.0.0",
+  "Version": "1.2.0.0",
   "Author": "Community",
   "Description": "Shows Claude usage on Stream Deck keys: live session (5h) & weekly (7d) limits from /usage, plus tokens and cost parsed from local Claude Code logs. Windows + macOS.",
   "Category": "Claude Usage",

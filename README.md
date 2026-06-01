@@ -8,9 +8,9 @@ as many keys as you like and pick a metric per key. Two families of metrics:
 - **Limits (live)** — Session (5h), Weekly (7d), Weekly Opus, Weekly Sonnet.
   Pulled from the same endpoint Claude Code's `/usage` uses. Shown as a big %
   with a ring gauge and reset countdown, color-coded green → amber → red.
-- **Tokens & cost (local logs)** — Tokens today, Cost today, Tokens session,
-  Cost session. Parsed from Claude Code's JSONL transcripts on disk. Shown as a
-  big value (e.g. `1.2M`, `$8.40`) with a `today`/`session` subtitle.
+- **Tokens & cost (local logs)** — Tokens/Cost for today, the last 7 days, or the
+  current session. Parsed from Claude Code's JSONL transcripts on disk. Shown as a
+  big value (e.g. `1.2M`, `$8.40`) with a `today`/`7 days`/`session` subtitle.
 
 Updates every 60s; **tap any key to force a refresh now**. Works on **Windows and
 macOS**, and on both **Pro and Max** (metrics a plan doesn't report show `--`).
