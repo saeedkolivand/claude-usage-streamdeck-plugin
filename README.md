@@ -1,34 +1,57 @@
 # Claude Usage — Stream Deck plugin
 
-![Claude Usage keys on a Stream Deck: Session, Weekly and Opus limit gauges on the top row; Tokens and Cost tiles on the bottom row](preview.png)
+Stream Deck keys that show your **live Claude usage limits** and your **local
+token / cost totals**. One configurable action — drop it on as many keys as you
+like and pick a metric per key. Tap any key to force a refresh.
 
-Shows your Claude usage on Stream Deck keys. One configurable action; drop it on
-as many keys as you like and pick a metric per key. Two families of metrics:
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Platforms](https://img.shields.io/badge/run%20on-macOS%20%7C%20Windows-blue.svg)
+![Stream Deck](https://img.shields.io/badge/Stream%20Deck-6.5%2B-black.svg)
+![Node](https://img.shields.io/badge/build%20with-Node%2020%2B-339933.svg)
 
-- **Limits (live)** — Session (5h), Weekly (7d), Weekly Opus, Weekly Sonnet.
-  Pulled from the same endpoint Claude Code's `/usage` uses. Shown as a big %
-  with a ring gauge and reset countdown, color-coded green → amber → red.
-- **Tokens & cost (local logs)** — Tokens/Cost for today, the last 7 days, or the
-  current session. Parsed from Claude Code's JSONL transcripts on disk. Shown as a
-  big value (e.g. `1.2M`, `$8.40`) with a `today`/`7 days`/`session` subtitle.
-
-Updates every 60s; **tap any key to force a refresh now**. Works on **Windows and
-macOS**, and on both **Pro and Max** (metrics a plan doesn't report show `--`).
+![Claude Usage keys on a Stream Deck: a row of Session, Weekly, Opus and Sonnet limit gauges, then Tokens and Cost tiles](docs/preview.png)
 
 ---
 
-## Install
+## Contents
 
-1. **Stream Deck app 6.5+** (it ships the Node runtime the plugin uses — you do
-   **not** need Node.js installed separately).
-2. Double-click **`com.local.claude-usage.streamDeckPlugin`** and click **Install**.
-3. In Stream Deck, open the **Claude Usage** category in the actions list and drag
-   **Claude Usage** onto a key.
-4. Select the key, open its settings (panel below the canvas), and pick a
-   **Metric**. Repeat on more keys for the others. The **amber/red** thresholds
-   (default 50/80) color the live limit gauges.
+- [What it shows](#what-it-shows)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Configure](#configure)
+- [Verify the data layer first (optional but handy)](#verify-the-data-layer-first-optional-but-handy)
+  - [macOS](#macos)
+  - [Linux](#linux)
+- [Notes & gotchas](#notes--gotchas)
+- [Rebuild from source](#rebuild-from-source)
+- [Project structure](#project-structure)
+- [License](#license)
 
-That's it. Keys populate within a second or two of being placed.
+---
+
+## What it shows
+
+Place the action on several keys, each set to a different metric, to see them all
+at once. Two families:
+
+| Metric | Family | Source | Shown as |
+| --- | --- | --- | --- |
+| **Session (5h)** | Limit (live) | `oauth/usage` endpoint (same as Claude Code's `/usage`) | big % + ring gauge + reset countdown |
+| **Weekly (7d)** | Limit (live) | same endpoint | big % + ring gauge + reset countdown |
+| **Weekly Opus** | Limit (live) | same endpoint | big % (or `--` if your plan doesn't report it) |
+| **Weekly Sonnet** | Limit (live) | same endpoint | big % (or `--`) |
+| **Tokens** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `1.2M`) + `today` / `7 days` / `session` |
+| **Cost** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `$8.40`) + `today` / `7 days` / `session` |
+
+Live limits are color-coded green → amber → red. Updates run every 60s, and
+**tapping any key forces a refresh now**.
+
+## Requirements
+
+**To run:** the official [Elgato Stream Deck app](https://www.elgato.com/downloads)
+**6.5 or newer** — it ships the Node runtime the plugin uses, so you do **not**
+need Node.js installed separately. Runs on **Windows 10+** and **macOS 12+**, and
+on both **Pro and Max** (metrics a plan doesn't report show `--`).
 
 > **Log in to Claude Code at least once** on this machine first, so the token
 > exists. The plugin reads it from `%USERPROFILE%\.claude\.credentials.json` on
@@ -36,14 +59,35 @@ That's it. Keys populate within a second or two of being placed.
 > never sends it anywhere except Anthropic's own usage endpoint. Token/cost
 > metrics additionally read the local transcripts under `~/.claude/projects/`.
 
-**Platform support:** the packaged plugin installs on the official Elgato Stream
-Deck app, which runs on **Windows 10+ and macOS 12+**. There is no official
-Stream Deck app for **Linux**, so the `.streamDeckPlugin` can't be installed
-there — but the data layer is plain Node and works on Linux (token from
-`~/.claude/.credentials.json`, logs from `~/.claude/projects/`), so the verify
-command below and the source build both run fine on Linux.
+> **Linux:** not supported for running. There is no official Stream Deck app for
+> Linux, so the `.streamDeckPlugin` can't be installed there — but the data layer
+> is plain Node and works on Linux (token from `~/.claude/.credentials.json`,
+> logs from `~/.claude/projects/`), so the verify command below and the source
+> build both run fine on Linux.
 
----
+**To build from source:** [Node.js 20+](https://nodejs.org) (any OS).
+
+## Install
+
+1. **Stream Deck app 6.5+** installed (see [Requirements](#requirements)).
+2. Double-click **`com.local.claude-usage.streamDeckPlugin`** and click **Install**.
+3. In Stream Deck, open the **Claude Usage** category in the actions list and drag
+   **Claude Usage** onto a key.
+4. Select the key and pick a **Metric** in its settings (see [Configure](#configure)).
+   Repeat on more keys for the others.
+
+That's it. Keys populate within a second or two of being placed.
+
+## Configure
+
+Select the key, then open its property inspector (panel below the canvas):
+
+| Field | What it does |
+| --- | --- |
+| **Metric** | Which value the key shows: Session / Weekly / Weekly Opus / Weekly Sonnet (live limits), or Tokens / Cost for today / 7 days / session. |
+| **Amber threshold** | % where a live limit gauge turns amber (default `50`). |
+| **Red threshold** | % where a live limit gauge turns red (default `80`). |
+| **User-Agent** (Advanced) | Sent to the usage endpoint; must start with `claude-code/` (default `claude-code/2.0.31`). Bump it if Anthropic ever tightens the check. |
 
 ## Verify the data layer first (optional but handy)
 
@@ -74,7 +118,9 @@ You should get JSON like:
 `utilization` is the percentage each key shows. On some plans `seven_day_opus`
 (or others) come back `null` — those keys will display `--`, which is expected.
 
-On **macOS**, the equivalent test (token comes from the Keychain):
+### macOS
+
+The equivalent test (token comes from the Keychain):
 
 ```bash
 TOKEN=$(security find-generic-password -s "Claude Code-credentials" -w | python3 -c 'import sys,json;print(json.load(sys.stdin)["claudeAiOauth"]["accessToken"])')
@@ -84,7 +130,9 @@ curl -s https://api.anthropic.com/api/oauth/usage \
   -H "User-Agent: claude-code/2.0.31" | python3 -m json.tool
 ```
 
-On **Linux** (token comes from the file, same as Windows):
+### Linux
+
+Token comes from the file, same as Windows:
 
 ```bash
 TOKEN=$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.claude/.credentials.json")))["claudeAiOauth"]["accessToken"])')
@@ -93,8 +141,6 @@ curl -s https://api.anthropic.com/api/oauth/usage \
   -H "anthropic-beta: oauth-2025-04-20" \
   -H "User-Agent: claude-code/2.0.31" | python3 -m json.tool
 ```
-
----
 
 ## Notes & gotchas
 
@@ -133,8 +179,6 @@ curl -s https://api.anthropic.com/api/oauth/usage \
     `PRICING` (`src/usage-core.ts`) need editing if Anthropic changes prices; an
     unrecognized family falls back to Sonnet-class pricing.
 
----
-
 ## Rebuild from source
 
 The source is included so you can tweak colors, labels, thresholds, or layout.
@@ -142,22 +186,10 @@ The source is included so you can tweak colors, labels, thresholds, or layout.
 ```bash
 npm install
 npm run build      # bundles src/plugin.ts -> com.local.claude-usage.sdPlugin/bin/plugin.js
+npm run preview    # regenerate docs/preview.png (README banner) from the real key faces
 npx streamdeck validate com.local.claude-usage.sdPlugin
 npx streamdeck pack com.local.claude-usage.sdPlugin --output dist --force
 python3 make_icons.py   # only if you change the icon art
-```
-
-Layout:
-
-```
-src/usage-core.ts   token read (file + macOS Keychain), API fetch (cached),
-                    metric/threshold logic, JSONL token/cost parser, SVG renderers
-src/plugin.ts       Stream Deck wiring (action, 60s refresh loop, force-on-press)
-com.local.claude-usage.sdPlugin/
-  manifest.json     plugin + action definition (Node 20 runtime, Windows + macOS)
-  bin/plugin.js     bundled output (regenerated by `npm run build`)
-  ui/inspector.html settings panel (metric, thresholds, User-Agent)
-  imgs/             icons
 ```
 
 To tweak the gauge look edit `svgKey`, the token/cost tiles edit `svgStat`, the
@@ -167,4 +199,23 @@ cost fallback rates edit `PRICING` — all in `src/usage-core.ts`.
 The build commands above are identical on Windows (PowerShell), macOS, and Linux
 — only `make_icons.py` needs Python with Pillow (`pip install pillow`).
 
----
+## Project structure
+
+```
+src/usage-core.ts   token read (file + macOS Keychain), API fetch (cached),
+                    metric/threshold logic, JSONL token/cost parser, SVG renderers
+src/plugin.ts       Stream Deck wiring (action, 60s refresh loop, force-on-press)
+scripts/
+  make-preview.ts   renders docs/preview.png (README banner) from the real key faces
+com.local.claude-usage.sdPlugin/
+  manifest.json     plugin + action definition (Node 20 runtime, Windows + macOS)
+  bin/plugin.js     bundled output (regenerated by `npm run build`)
+  ui/inspector.html settings panel (metric, thresholds, User-Agent)
+  imgs/             icons
+docs/
+  preview.png       readme banner (generated by `npm run preview`)
+```
+
+## License
+
+MIT.

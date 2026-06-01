@@ -5,6 +5,9 @@ node_modules/
 dist/
 *.streamDeckPlugin
 
+# preview generator temp bundle (re-create with `npm run preview`)
+scripts/.make-preview.mjs
+
 # logs / OS cruft
 *.log
 .DS_Store

@@ -6,7 +6,8 @@
   "type": "module",
   "description": "Stream Deck plugin showing Claude session/weekly usage",
   "scripts": {
-    "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.local.claude-usage.sdPlugin/bin/plugin.js"
+    "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.local.claude-usage.sdPlugin/bin/plugin.js",
+    "preview": "esbuild scripts/make-preview.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-preview.mjs && node scripts/.make-preview.mjs"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.0",
