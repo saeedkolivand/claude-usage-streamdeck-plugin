@@ -1,0 +1,91 @@
+name: Bug report
+description: Something on a key is wrong or not updating.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: a key reading **"open Claude"**, **"offline"**, or **"--"** is often expected
+        (token needs a refresh, no network, or a metric your plan doesn't report). See the README
+        Notes & gotchas first.
+  - type: checkboxes
+    id: prereqs
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I searched existing issues and didn't find a duplicate.
+          required: true
+        - label: I have signed in to Claude Code at least once on this machine.
+          required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: sd-version
+    attributes:
+      label: Stream Deck app version
+      placeholder: "6.5"
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: From manifest.json (e.g. 1.1.0.0).
+      placeholder: "1.1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: plan
+    attributes:
+      label: Claude plan
+      options:
+        - Pro
+        - Max
+        - Other / not sure
+    validations:
+      required: false
+  - type: dropdown
+    id: metric
+    attributes:
+      label: Which metric is affected?
+      options:
+        - Session (5h)
+        - Weekly — all models (7d)
+        - Weekly — Opus (7d)
+        - Weekly — Sonnet (7d)
+        - Tokens — today
+        - Cost — today
+        - Tokens — week (7d)
+        - Cost — week (7d)
+        - Tokens — session
+        - Cost — session
+        - Multiple / all
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What does the key show, and what's wrong with it?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots / extra context
+      description: A photo of the key(s) and anything else useful.
+    validations:
+      required: false
