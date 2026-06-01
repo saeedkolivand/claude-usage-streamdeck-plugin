@@ -202,6 +202,8 @@ export function toDataUri(svg: string): string {
 export type LogStats = {
   todayTokens: number;
   todayCost: number;
+  weekTokens: number; // rolling last 7 days
+  weekCost: number;
   sessionTokens: number;
   sessionCost: number;
   ok: boolean; // false when the projects directory can't be read
@@ -296,6 +298,8 @@ export async function getLogStats(force = false, baseDir?: string): Promise<LogS
   const out: LogStats = {
     todayTokens: 0,
     todayCost: 0,
+    weekTokens: 0,
+    weekCost: 0,
     sessionTokens: 0,
     sessionCost: 0,
     ok: true,
@@ -318,14 +322,16 @@ export async function getLogStats(force = false, baseDir?: string): Promise<LogS
   files.sort((a, b) => b.mtime - a.mtime); // newest first
   const sessionPath = files[0].path; // most-recently-active conversation
   const todayStr = new Date().toDateString();
-  const startOfTodayMs = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const startOfWeekMs = now - 7 * 86400 * 1000; // rolling 7-day window
 
   const seenToday = new Set<string>();
+  const seenWeek = new Set<string>();
   const seenSession = new Set<string>();
 
   for (const f of files) {
-    // For "today" we only need files touched today; always read the session file.
-    if (f.mtime < startOfTodayMs && f.path !== sessionPath) continue;
+    // We need files touched within the last 7 days (covers today + week);
+    // always read the session file regardless of when it was last touched.
+    if (f.mtime < startOfWeekMs && f.path !== sessionPath) continue;
 
     let text: string;
     try {
@@ -362,6 +368,16 @@ export async function getLogStats(force = false, baseDir?: string): Promise<LogS
           if (key) seenToday.add(k);
           out.todayTokens += tokens;
           out.todayCost += cost;
+        }
+      }
+
+      const isThisWeek = !Number.isNaN(ts) && ts >= startOfWeekMs;
+      if (isThisWeek) {
+        const k = "w:" + key;
+        if (!key || !seenWeek.has(k)) {
+          if (key) seenWeek.add(k);
+          out.weekTokens += tokens;
+          out.weekCost += cost;
         }
       }
 

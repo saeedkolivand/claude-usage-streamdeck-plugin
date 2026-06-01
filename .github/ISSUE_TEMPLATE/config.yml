@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting (README)
+    url: https://github.com/saeedkolivand/claude-usage-streamdeck-plugin#notes--gotchas
+    about: A key showing "open Claude", "offline", or "--" is usually expected — check the Notes & gotchas section first.
+  - name: Questions & ideas
+    url: https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/discussions
+    about: For open-ended questions or to float an idea before opening a formal request.

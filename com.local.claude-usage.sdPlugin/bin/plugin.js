@@ -4,6 +4,12 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __knownSymbol = (name, symbol2) => (symbol2 = Symbol[name]) ? symbol2 : /* @__PURE__ */ Symbol.for("Symbol." + name);
+var __typeError = (msg) => {
+  throw TypeError(msg);
+};
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
@@ -27,14 +33,44 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-var __decorateClass = (decorators, target, key, kind) => {
-  var result = kind > 1 ? void 0 : kind ? __getOwnPropDesc(target, key) : target;
-  for (var i = decorators.length - 1, decorator; i >= 0; i--)
-    if (decorator = decorators[i])
-      result = (kind ? decorator(target, key, result) : decorator(result)) || result;
-  if (kind && result) __defProp(target, key, result);
-  return result;
+var __decoratorStart = (base) => [, , , __create(base?.[__knownSymbol("metadata")] ?? null)];
+var __decoratorStrings = ["class", "method", "getter", "setter", "accessor", "field", "value", "get", "set"];
+var __expectFn = (fn) => fn !== void 0 && typeof fn !== "function" ? __typeError("Function expected") : fn;
+var __decoratorContext = (kind, name, done, metadata, fns) => ({ kind: __decoratorStrings[kind], name, metadata, addInitializer: (fn) => done._ ? __typeError("Already initialized") : fns.push(__expectFn(fn || null)) });
+var __decoratorMetadata = (array2, target) => __defNormalProp(target, __knownSymbol("metadata"), array2[3]);
+var __runInitializers = (array2, flags, self, value) => {
+  for (var i = 0, fns = array2[flags >> 1], n = fns && fns.length; i < n; i++) flags & 1 ? fns[i].call(self) : value = fns[i].call(self, value);
+  return value;
 };
+var __decorateElement = (array2, flags, name, decorators, target, extra) => {
+  var fn, it, done, ctx, access, k = flags & 7, s = !!(flags & 8), p = !!(flags & 16);
+  var j = k > 3 ? array2.length + 1 : k ? s ? 1 : 2 : 0, key = __decoratorStrings[k + 5];
+  var initializers = k > 3 && (array2[j - 1] = []), extraInitializers = array2[j] || (array2[j] = []);
+  var desc = k && (!p && !s && (target = target.prototype), k < 5 && (k > 3 || !p) && __getOwnPropDesc(k < 4 ? target : { get [name]() {
+    return __privateGet(this, extra);
+  }, set [name](x) {
+    return __privateSet(this, extra, x);
+  } }, name));
+  k ? p && k < 4 && __name(extra, (k > 2 ? "set " : k > 1 ? "get " : "") + name) : __name(target, name);
+  for (var i = decorators.length - 1; i >= 0; i--) {
+    ctx = __decoratorContext(k, name, done = {}, array2[3], extraInitializers);
+    if (k) {
+      ctx.static = s, ctx.private = p, access = ctx.access = { has: p ? (x) => __privateIn(target, x) : (x) => name in x };
+      if (k ^ 3) access.get = p ? (x) => (k ^ 1 ? __privateGet : __privateMethod)(x, target, k ^ 4 ? extra : desc.get) : (x) => x[name];
+      if (k > 2) access.set = p ? (x, y) => __privateSet(x, target, y, k ^ 4 ? extra : desc.set) : (x, y) => x[name] = y;
+    }
+    it = (0, decorators[i])(k ? k < 4 ? p ? extra : desc[key] : k > 4 ? void 0 : { get: desc.get, set: desc.set } : target, ctx), done._ = 1;
+    if (k ^ 4 || it === void 0) __expectFn(it) && (k > 4 ? initializers.unshift(it) : k ? p ? extra = it : desc[key] = it : target = it);
+    else if (typeof it !== "object" || it === null) __typeError("Object expected");
+    else __expectFn(fn = it.get) && (desc.get = fn), __expectFn(fn = it.set) && (desc.set = fn), __expectFn(fn = it.init) && initializers.unshift(fn);
+  }
+  return k || __decoratorMetadata(array2, target), desc && __defProp(target, name, desc), p ? k ^ 4 ? extra : desc : target;
+};
+var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+var __privateIn = (member, obj) => Object(obj) !== obj ? __typeError('Cannot use the "in" operator on this value') : member.has(obj);
+var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
+var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 
 // node_modules/ws/lib/constants.js
 var require_constants = __commonJS({
@@ -4832,12 +4868,12 @@ var NEVER = Object.freeze({
 // @__NO_SIDE_EFFECTS__
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
-    var _a;
+    var _a2;
     Object.defineProperty(inst, "_zod", {
       value: inst._zod ?? {},
       enumerable: false
     });
-    (_a = inst._zod).traits ?? (_a.traits = /* @__PURE__ */ new Set());
+    (_a2 = inst._zod).traits ?? (_a2.traits = /* @__PURE__ */ new Set());
     inst._zod.traits.add(name);
     initializer2(inst, def);
     for (const k in _.prototype) {
@@ -4852,10 +4888,10 @@ function $constructor(name, initializer2, params) {
   }
   Object.defineProperty(Definition, "name", { value: name });
   function _(def) {
-    var _a;
+    var _a2;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a = inst._zod).deferred ?? (_a.deferred = []);
+    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
     for (const fn of inst._zod.deferred) {
       fn();
     }
@@ -5346,8 +5382,8 @@ function aborted(x, startIndex = 0) {
 }
 function prefixIssues(path5, issues) {
   return issues.map((iss) => {
-    var _a;
-    (_a = iss).path ?? (_a.path = []);
+    var _a2;
+    (_a2 = iss).path ?? (_a2.path = []);
     iss.path.unshift(path5);
     return iss;
   });
@@ -5486,7 +5522,7 @@ function treeifyError(error40, _mapper) {
   };
   const result = { errors: [] };
   const processError = (error41, path5 = []) => {
-    var _a, _b;
+    var _a2, _b;
     for (const issue2 of error41.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, issue2.path));
@@ -5507,7 +5543,7 @@ function treeifyError(error40, _mapper) {
           const terminal = i === fullpath.length - 1;
           if (typeof el === "string") {
             curr.properties ?? (curr.properties = {});
-            (_a = curr.properties)[el] ?? (_a[el] = { errors: [] });
+            (_a2 = curr.properties)[el] ?? (_a2[el] = { errors: [] });
             curr = curr.properties[el];
           } else {
             curr.items ?? (curr.items = []);
@@ -5720,10 +5756,10 @@ var uppercase = /^[^a-z]*$/;
 
 // node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a;
+  var _a2;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a = inst._zod).onattach ?? (_a.onattach = []);
+  (_a2 = inst._zod).onattach ?? (_a2.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -5789,8 +5825,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a;
-    (_a = inst2._zod.bag).multipleOf ?? (_a.multipleOf = def.value);
+    var _a2;
+    (_a2 = inst2._zod.bag).multipleOf ?? (_a2.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -5916,9 +5952,9 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
   };
 });
 var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -5943,9 +5979,9 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   };
 });
 var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -5970,9 +6006,9 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   };
 });
 var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -6000,9 +6036,9 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6029,9 +6065,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6058,9 +6094,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a;
+  var _a2;
   $ZodCheck.init(inst, def);
-  (_a = inst._zod.def).when ?? (_a.when = (payload) => {
+  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6089,7 +6125,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a, _b;
+  var _a2, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -6100,7 +6136,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a = inst._zod).check ?? (_a.check = (payload) => {
+    (_a2 = inst._zod).check ?? (_a2.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -6301,7 +6337,7 @@ var version = {
 
 // node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a;
+  var _a2;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -6316,7 +6352,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a = inst._zod).deferred ?? (_a.deferred = []);
+    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -13682,7 +13718,7 @@ var JSONSchemaGenerator = class {
     this.seen = /* @__PURE__ */ new Map();
   }
   process(schema, _params = { path: [], schemaPath: [] }) {
-    var _a;
+    var _a2;
     const def = schema._zod.def;
     const formatMap = {
       guid: "uuid",
@@ -14144,7 +14180,7 @@ var JSONSchemaGenerator = class {
       delete result.schema.default;
     }
     if (this.io === "input" && result.schema._prefault)
-      (_a = result.schema).default ?? (_a.default = result.schema._prefault);
+      (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
     delete result.schema._prefault;
     const _result = this.seen.get(schema);
     return _result.schema;
@@ -17480,6 +17516,8 @@ async function getLogStats(force = false, baseDir) {
   const out = {
     todayTokens: 0,
     todayCost: 0,
+    weekTokens: 0,
+    weekCost: 0,
     sessionTokens: 0,
     sessionCost: 0,
     ok: true
@@ -17499,11 +17537,12 @@ async function getLogStats(force = false, baseDir) {
   files.sort((a, b) => b.mtime - a.mtime);
   const sessionPath = files[0].path;
   const todayStr = (/* @__PURE__ */ new Date()).toDateString();
-  const startOfTodayMs = new Date((/* @__PURE__ */ new Date()).setHours(0, 0, 0, 0)).getTime();
+  const startOfWeekMs = now - 7 * 86400 * 1e3;
   const seenToday = /* @__PURE__ */ new Set();
+  const seenWeek = /* @__PURE__ */ new Set();
   const seenSession = /* @__PURE__ */ new Set();
   for (const f of files) {
-    if (f.mtime < startOfTodayMs && f.path !== sessionPath) continue;
+    if (f.mtime < startOfWeekMs && f.path !== sessionPath) continue;
     let text;
     try {
       text = await (0, import_promises2.readFile)(f.path, "utf8");
@@ -17532,6 +17571,15 @@ async function getLogStats(force = false, baseDir) {
           if (key) seenToday.add(k);
           out.todayTokens += tokens;
           out.todayCost += cost;
+        }
+      }
+      const isThisWeek = !Number.isNaN(ts) && ts >= startOfWeekMs;
+      if (isThisWeek) {
+        const k = "w:" + key;
+        if (!key || !seenWeek.has(k)) {
+          if (key) seenWeek.add(k);
+          out.weekTokens += tokens;
+          out.weekCost += cost;
         }
       }
       if (f.path === sessionPath) {
@@ -17577,7 +17625,14 @@ function svgStat(opts) {
 
 // src/plugin.ts
 var ACCENT = "#d97757";
-var LOG_METRICS = /* @__PURE__ */ new Set(["tokens_today", "cost_today", "tokens_session", "cost_session"]);
+var LOG_METRICS = /* @__PURE__ */ new Set([
+  "tokens_today",
+  "cost_today",
+  "tokens_week",
+  "cost_week",
+  "tokens_session",
+  "cost_session"
+]);
 var visible = /* @__PURE__ */ new Set();
 async function draw(act, s) {
   const metric = s.metric || "session";
@@ -17622,6 +17677,14 @@ async function drawStat(act, metric) {
     label = "Cost";
     value = fmtCost(stats.todayCost);
     sub = "today";
+  } else if (metric === "tokens_week") {
+    label = "Tokens";
+    value = fmtTokens(stats.weekTokens);
+    sub = "7 days";
+  } else if (metric === "cost_week") {
+    label = "Cost";
+    value = fmtCost(stats.weekCost);
+    sub = "7 days";
   } else if (metric === "tokens_session") {
     label = "Tokens";
     value = fmtTokens(stats.sessionTokens);
@@ -17645,7 +17708,9 @@ async function refreshAll(force) {
     }
   }
 }
-var UsageMeter = class extends SingletonAction {
+var _UsageMeter_decorators, _init, _a;
+_UsageMeter_decorators = [action({ UUID: "com.local.claude-usage.meter" })];
+var UsageMeter = class extends (_a = SingletonAction) {
   async onWillAppear(ev) {
     visible.add(ev.action);
     await draw(ev.action, ev.payload.settings);
@@ -17660,9 +17725,9 @@ var UsageMeter = class extends SingletonAction {
     await refreshAll(true);
   }
 };
-UsageMeter = __decorateClass([
-  action({ UUID: "com.local.claude-usage.meter" })
-], UsageMeter);
+_init = __decoratorStart(_a);
+UsageMeter = __decorateElement(_init, 0, "UsageMeter", _UsageMeter_decorators, UsageMeter);
+__runInitializers(_init, 1, UsageMeter);
 plugin_default.actions.registerAction(new UsageMeter());
 plugin_default.connect();
 setTimeout(() => refreshAll(false).catch(() => {
