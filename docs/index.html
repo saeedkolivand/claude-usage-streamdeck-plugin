@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Coding Usage Meter — Stream Deck plugin</title>
+    <meta
+      name="description"
+      content="Live session and weekly usage limits, tokens, and cost for your AI coding workflow — rendered straight onto your Stream Deck keys. Works with Claude Code. Windows and macOS."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon@2x.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AI Coding Usage Meter — Stream Deck plugin" />
+    <meta
+      property="og:description"
+      content="Live limits, tokens, and cost on your Stream Deck keys. One action, as many keys as you like. Tap to refresh."
+    />
+    <meta
+      property="og:image"
+      content="https://saeedkolivand.github.io/claude-usage-streamdeck-plugin/preview.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="./">
+          <img src="icon.png" alt="" width="22" height="22" />
+          AI Coding Usage Meter
+        </a>
+        <span class="nav__spacer"></span>
+        <a
+          class="nav__link nav__link--hide-sm"
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin#what-it-shows"
+          >Features</a
+        >
+        <a class="nav__link nav__link--hide-sm" href="#privacy">Privacy</a>
+        <a
+          class="nav__link"
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+          >GitHub</a
+        >
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <main>
+      <section class="tile tile--light hero">
+        <div class="tile__inner">
+          <p class="eyebrow">Stream Deck plugin · Windows &amp; macOS</p>
+          <h1>Your AI coding usage.<br />On a key.</h1>
+          <p class="lead">
+            Live session and weekly limits, tokens, and cost — rendered straight
+            onto your Stream Deck. One action, as many keys as you like. Tap to
+            refresh.
+          </p>
+          <div class="hero__cta">
+            <a
+              class="btn btn--primary"
+              href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+              >Get it on GitHub</a
+            >
+            <a class="btn btn--ghost" href="#how">How it works</a>
+          </div>
+          <img
+            class="hero__shot"
+            src="preview.png"
+            alt="A row of Stream Deck keys showing Session, Weekly, Opus and Sonnet limit gauges, then Tokens and Cost tiles"
+            width="1224"
+            height="216"
+          />
+          <p class="hero__note">Free · open source · MIT licensed</p>
+        </div>
+      </section>
+
+      <!-- Limits -->
+      <section class="tile tile--dark" id="limits">
+        <div class="tile__inner">
+          <div class="feature__head">
+            <p class="eyebrow">Limits</p>
+            <h2>The whole budget, at a glance.</h2>
+            <p class="lead">
+              Session (5h) and weekly (7d) utilization as color-coded ring
+              gauges — green, amber, red — each with a live reset countdown. Pro
+              and Max plans both supported.
+            </p>
+          </div>
+          <div class="cards">
+            <figure class="card">
+              <img src="gallery/session.png" alt="Session limit gauge at 33 percent, green" />
+              <figcaption>Session · 5h</figcaption>
+            </figure>
+            <figure class="card">
+              <img src="gallery/weekly.png" alt="Weekly limit gauge at 61 percent, amber" />
+              <figcaption>Weekly · 7d</figcaption>
+            </figure>
+            <figure class="card">
+              <img src="gallery/opus-7d.png" alt="Opus weekly gauge at 84 percent, red" />
+              <figcaption>Opus · 7d</figcaption>
+            </figure>
+            <figure class="card">
+              <img src="gallery/sonnet-7d.png" alt="Sonnet weekly gauge at 12 percent, green" />
+              <figcaption>Sonnet · 7d</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tokens & cost -->
+      <section class="tile tile--parchment" id="tokens">
+        <div class="tile__inner">
+          <div class="feature__head">
+            <p class="eyebrow">Tokens &amp; cost</p>
+            <h2>Counted from your own logs.</h2>
+            <p class="lead">
+              Token totals and equivalent spend, parsed locally from Claude
+              Code's transcripts. Pick today, the last 7 days, or your current
+              session — per key.
+            </p>
+          </div>
+          <div class="cards cards--3">
+            <figure class="card">
+              <img src="gallery/tokens-today.png" alt="Tokens tile showing 1.2M today" />
+              <figcaption>Tokens · today</figcaption>
+            </figure>
+            <figure class="card">
+              <img src="gallery/cost-7d.png" alt="Cost tile showing $8.40 over 7 days" />
+              <figcaption>Cost · 7 days</figcaption>
+            </figure>
+            <figure class="card">
+              <img src="gallery/tokens-session.png" alt="Tokens tile showing 318K this session" />
+              <figcaption>Tokens · session</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- Privacy -->
+      <section class="tile tile--dark" id="privacy">
+        <div class="tile__inner">
+          <div class="feature__head">
+            <p class="eyebrow">Privacy</p>
+            <h2>Private by design.</h2>
+          </div>
+          <div class="points">
+            <div class="point">
+              <h3>Runs on your machine</h3>
+              <p>
+                No servers, no analytics, no telemetry. The plugin reads data
+                that already exists locally and draws it on your keys.
+              </p>
+            </div>
+            <div class="point">
+              <h3>One request, to Anthropic</h3>
+              <p>
+                Your own token is sent only to Anthropic's usage endpoint — the
+                same one Claude Code's <code>/usage</code> uses. Nothing is
+                routed through anyone else.
+              </p>
+            </div>
+            <div class="point">
+              <h3>Stores nothing</h3>
+              <p>
+                The credential token is never copied or cached, and transcript
+                contents are read, totaled, and discarded.
+              </p>
+            </div>
+          </div>
+          <p class="points__foot">
+            Read the full
+            <a
+              href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/blob/main/PRIVACY.md"
+              >privacy policy</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section class="tile tile--light" id="how">
+        <div class="tile__inner">
+          <div class="feature__head">
+            <p class="eyebrow">Get started</p>
+            <h2>Three steps to a live key.</h2>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <h3>Install</h3>
+              <p>
+                Add the plugin to the Stream Deck app, then drag the
+                <strong>Usage Meter</strong> action onto any key.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Pick a metric</h3>
+              <p>
+                Choose Session, Weekly, Opus, Sonnet, Tokens, or Cost in the
+                key's settings. Repeat on more keys for the rest.
+              </p>
+            </div>
+            <div class="step">
+              <h3>Watch it update</h3>
+              <p>
+                Keys refresh every 60 seconds, and a tap forces an immediate
+                refresh. All keys share one cached request.
+              </p>
+            </div>
+          </div>
+          <p class="req">
+            Requires the <strong>Stream Deck app 6.5+</strong> on
+            <strong>Windows 10+</strong> or <strong>macOS 12+</strong>, and that
+            you've signed in to Claude Code once on this machine. The Node
+            runtime ships with Stream Deck — nothing else to install.
+          </p>
+          <div class="hero__cta" style="margin-top: 36px">
+            <a
+              class="btn btn--primary"
+              href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin#install"
+              >Install instructions</a
+            >
+            <a
+              class="btn btn--ghost"
+              href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+              >View source</a
+            >
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <nav class="footer__links">
+          <a href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+            >GitHub repository</a
+          >
+          <a
+            href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/blob/main/PRIVACY.md"
+            >Privacy policy</a
+          >
+          <a
+            href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/issues"
+            >Support</a
+          >
+          <a
+            href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/blob/main/LICENSE"
+            >License (MIT)</a
+          >
+        </nav>
+        <div class="footer__fine">
+          <p>
+            AI Coding Usage Meter is an independent, unofficial tool. It is not
+            affiliated with, endorsed by, or sponsored by Anthropic or Elgato.
+            “Claude” and “Claude Code” are trademarks of Anthropic and are used
+            only to describe compatibility. The Anthropic usage endpoint it reads
+            is undocumented and may change without notice.
+          </p>
+          <p>© 2026 Saeed Kolivand · Released under the MIT License.</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
