@@ -1,0 +1,35 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "node scripts/sync-version.mjs ${nextRelease.version} && npm run build && npx streamdeck pack com.saeedkolivand.claude-usage.sdPlugin --output dist --force"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/com.saeedkolivand.claude-usage.streamDeckPlugin",
+            "label": "AI Coding Usage Meter ${nextRelease.version} (.streamDeckPlugin)"
+          }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": [
+          "package.json",
+          "com.saeedkolivand.claude-usage.sdPlugin/manifest.json",
+          "com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js"
+        ],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ]
+  ]
+}

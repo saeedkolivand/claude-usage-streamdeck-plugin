@@ -268,10 +268,12 @@ h3 {
 }
 
 .hero__shot {
+  display: block;
   margin: 64px auto 0;
   max-width: 1000px;
   border-radius: 18px;
-  box-shadow: var(--shadow-product);
+  overflow: hidden;
+  box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.28);
 }
 
 .hero__note {

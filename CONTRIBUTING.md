@@ -83,3 +83,20 @@ actual key when you can.
   tested).
 - Note which OS you tested on — ideally both **Windows** and **macOS**, since the
   plugin supports both.
+
+## Commits & releases
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
+(`feat:`, `fix:`, `chore:`, `docs:`, …) because releases are automated with
+**semantic-release**:
+
+- Every push/PR runs **CI** (`.github/workflows/ci.yml`): build → `validate` →
+  `pack`, with the `.streamDeckPlugin` uploaded as a build artifact.
+- Every push to `main` runs **Release** (`.github/workflows/release.yml`):
+  semantic-release reads the commits, picks the next version, syncs it into
+  `package.json` and `manifest.json` (4-part numeric) via
+  `scripts/sync-version.mjs`, rebuilds, packs, and publishes a **GitHub Release**
+  with the `.streamDeckPlugin` attached.
+
+So `fix:` → patch, `feat:` → minor, and a `feat!:`/`BREAKING CHANGE:` → major.
+No manual version bumps — just write conventional commits.

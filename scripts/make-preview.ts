@@ -47,7 +47,7 @@ function placed(svg: string, x: number): string {
 
 const keys = FACES.map((f, i) => placed(f, PAD + i * (KEY + GAP))).join("\n");
 const banner = `<svg xmlns="http://www.w3.org/2000/svg" width="${W * SCALE}" height="${H * SCALE}" viewBox="0 0 ${W} ${H}">
-<rect x="0" y="0" width="${W}" height="${H}" rx="28" fill="#06080f"/>
+<rect x="0" y="0" width="${W}" height="${H}" fill="#06080f"/>
 ${keys}
 </svg>`;
 

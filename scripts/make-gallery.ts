@@ -47,7 +47,7 @@ function placed(svg: string): string {
 mkdirSync(outDir, { recursive: true });
 for (const { slug, svg } of VARIANTS) {
 	const card = `<svg xmlns="http://www.w3.org/2000/svg" width="${CARD * SCALE}" height="${CARD * SCALE}" viewBox="0 0 ${CARD} ${CARD}">
-<rect x="0" y="0" width="${CARD}" height="${CARD}" rx="40" fill="#06080f"/>
+<rect x="0" y="0" width="${CARD}" height="${CARD}" fill="#06080f"/>
 ${placed(svg)}
 </svg>`;
 	const png = await sharp(Buffer.from(card)).png().toBuffer();
