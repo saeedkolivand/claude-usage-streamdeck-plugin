@@ -1,11 +1,12 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
-  "UUID": "com.local.claude-usage",
-  "Name": "Claude Usage",
+  "UUID": "com.saeedkolivand.claude-usage",
+  "Name": "AI Coding Usage Meter",
   "Version": "1.2.0.0",
-  "Author": "Community",
-  "Description": "Shows Claude usage on Stream Deck keys: live session (5h) & weekly (7d) limits from /usage, plus tokens and cost parsed from local Claude Code logs. Windows + macOS.",
-  "Category": "Claude Usage",
+  "Author": "Saeed Kolivand",
+  "Description": "Shows AI coding usage on Stream Deck keys: live session (5h) & weekly (7d) limits, plus tokens and cost parsed from local logs. Works with Claude Code. Windows + macOS.",
+  "URL": "https://github.com/saeedkolivand/claude-usage-streamdeck-plugin",
+  "Category": "AI Coding Usage Meter",
   "CategoryIcon": "imgs/category-icon",
   "Icon": "imgs/plugin-icon",
   "SDKVersion": 2,
@@ -29,8 +30,8 @@
   "CodePath": "bin/plugin.js",
   "Actions": [
     {
-      "Name": "Claude Usage",
-      "UUID": "com.local.claude-usage.meter",
+      "Name": "Usage Meter",
+      "UUID": "com.saeedkolivand.claude-usage.meter",
       "Icon": "imgs/actions/meter/icon",
       "Tooltip": "Show a Claude usage meter: Session/Weekly limits, or tokens/cost (today or session).",
       "PropertyInspectorPath": "ui/inspector.html",

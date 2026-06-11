@@ -3,7 +3,7 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 
-ROOT = os.path.join(os.path.dirname(__file__), "com.local.claude-usage.sdPlugin", "imgs")
+ROOT = os.path.join(os.path.dirname(__file__), "com.saeedkolivand.claude-usage.sdPlugin", "imgs")
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 BG = (15, 18, 22, 255)        # #0f1216

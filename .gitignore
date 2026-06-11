@@ -13,7 +13,7 @@ scripts/.make-preview.mjs
 .DS_Store
 Thumbs.db
 
-# NOTE: com.local.claude-usage.sdPlugin/bin/plugin.js IS committed on purpose,
+# NOTE: com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js IS committed on purpose,
 # so the plugin installs/packs without anyone needing to build first.
 # If you'd rather keep a build-only repo, add this line:
-# com.local.claude-usage.sdPlugin/bin/
+# com.saeedkolivand.claude-usage.sdPlugin/bin/

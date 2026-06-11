@@ -19,7 +19,7 @@ src/usage-core.ts   data + rendering logic (no Stream Deck SDK dependency):
                     token/cost parser, and the SVG renderers
 src/plugin.ts       Stream Deck wiring: the action, the 60s refresh loop, and
                     force-refresh-on-press
-com.local.claude-usage.sdPlugin/
+com.saeedkolivand.claude-usage.sdPlugin/
   manifest.json     plugin + action definition (Node 20 runtime, Windows + macOS)
   bin/plugin.js     bundled output — generated, committed, do not hand-edit
   ui/inspector.html the settings panel (metric, thresholds, advanced)
@@ -46,8 +46,8 @@ will be asked to rebuild.
 Validate and (optionally) package the plugin:
 
 ```bash
-npx streamdeck validate com.local.claude-usage.sdPlugin
-npx streamdeck pack com.local.claude-usage.sdPlugin --output dist --force
+npx streamdeck validate com.saeedkolivand.claude-usage.sdPlugin
+npx streamdeck pack com.saeedkolivand.claude-usage.sdPlugin --output dist --force
 ```
 
 ## Adding a new metric
@@ -58,7 +58,7 @@ A metric usually touches four places — keep them consistent:
    field on `LogStats` for a local-log stat).
 2. `src/plugin.ts` — add it to `LOG_METRICS` (if it's a local-log stat) and to the
    `drawStat`/`drawGauge` branch.
-3. `com.local.claude-usage.sdPlugin/ui/inspector.html` — add the `<option>`.
+3. `com.saeedkolivand.claude-usage.sdPlugin/ui/inspector.html` — add the `<option>`.
 4. `README.md` — add it to the metric list.
 
 ## Testing
