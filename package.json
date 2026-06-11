@@ -8,7 +8,8 @@
   "scripts": {
     "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js",
     "preview": "esbuild scripts/make-preview.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-preview.mjs && node scripts/.make-preview.mjs",
-    "gallery": "esbuild scripts/make-gallery.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-gallery.mjs && node scripts/.make-gallery.mjs"
+    "gallery": "esbuild scripts/make-gallery.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-gallery.mjs && node scripts/.make-gallery.mjs",
+    "marketplace": "esbuild scripts/make-marketplace.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-marketplace.mjs && node scripts/.make-marketplace.mjs"
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.1.0",

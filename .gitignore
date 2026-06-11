@@ -8,6 +8,7 @@ dist/
 # preview / gallery generator temp bundles (re-create with `npm run preview` / `npm run gallery`)
 scripts/.make-preview.mjs
 scripts/.make-gallery.mjs
+scripts/.make-marketplace.mjs
 
 # logs / OS cruft
 *.log
