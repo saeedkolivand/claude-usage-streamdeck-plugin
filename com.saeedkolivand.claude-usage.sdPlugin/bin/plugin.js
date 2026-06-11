@@ -17709,7 +17709,7 @@ async function refreshAll(force) {
   }
 }
 var _UsageMeter_decorators, _init, _a;
-_UsageMeter_decorators = [action({ UUID: "com.local.claude-usage.meter" })];
+_UsageMeter_decorators = [action({ UUID: "com.saeedkolivand.claude-usage.meter" })];
 var UsageMeter = class extends (_a = SingletonAction) {
   async onWillAppear(ev) {
     visible.add(ev.action);

@@ -4,9 +4,9 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Stream Deck plugin showing Claude session/weekly usage",
+  "description": "Stream Deck plugin showing AI coding session/weekly usage (works with Claude Code)",
   "scripts": {
-    "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.local.claude-usage.sdPlugin/bin/plugin.js",
+    "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js",
     "preview": "esbuild scripts/make-preview.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-preview.mjs && node scripts/.make-preview.mjs"
   },
   "dependencies": {

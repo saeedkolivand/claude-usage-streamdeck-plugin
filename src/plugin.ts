@@ -115,7 +115,7 @@ async function refreshAll(force: boolean): Promise<void> {
   }
 }
 
-@action({ UUID: "com.local.claude-usage.meter" })
+@action({ UUID: "com.saeedkolivand.claude-usage.meter" })
 class UsageMeter extends SingletonAction<Settings> {
   override async onWillAppear(ev: WillAppearEvent<Settings>): Promise<void> {
     visible.add(ev.action);
