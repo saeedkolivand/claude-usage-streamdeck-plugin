@@ -3,8 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Claude Usage</title>
+    <title>AI Coding Usage Meter</title>
     <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+    <style>
+      /* Match the Stream Deck property-inspector UI font, and keep helper text legible. */
+      body {
+        font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      }
+      .hint {
+        display: block;
+        margin: 6px 4px 2px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #b9b9b9;
+      }
+      .hint b {
+        color: #e6e6e6;
+        font-weight: 600;
+      }
+      .hint code {
+        font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+        color: #e6e6e6;
+      }
+    </style>
   </head>
   <body>
     <sdpi-item label="Metric">
@@ -34,7 +55,7 @@
       <sdpi-range setting="crit" min="0" max="100" step="5" default="80" showlabels></sdpi-range>
     </sdpi-item>
     <sdpi-item label="">
-      <small style="opacity: 0.7; line-height: 1.4; display: block">
+      <small class="hint">
         Thresholds color the live <b>limit</b> gauges only (Session / Weekly).
       </small>
     </sdpi-item>
@@ -48,7 +69,7 @@
         ></sdpi-textfield>
       </sdpi-item>
       <sdpi-item label="">
-        <small style="opacity: 0.7; line-height: 1.4; display: block">
+        <small class="hint">
           Leave blank unless requests start failing. Must begin with
           <code>claude-code/</code> or the API rate-limits aggressively. Bump the
           version number if Anthropic tightens the check.
@@ -57,7 +78,7 @@
     </details>
 
     <sdpi-item label="">
-      <small style="opacity: 0.7; line-height: 1.4; display: block">
+      <small class="hint">
         Opus/Sonnet limit metrics show <b>--</b> on plans that don't report them.
         Tokens &amp; cost come from Claude Code's local logs; cost is a best-effort
         estimate (and notional "equivalent API spend" on Pro/Max). Tap a key to
