@@ -45,6 +45,17 @@
       </sdpi-select>
     </sdpi-item>
 
+    <sdpi-item label="Title">
+      <sdpi-textfield setting="title" placeholder="Auto (metric name)" maxlength="16"></sdpi-textfield>
+    </sdpi-item>
+    <sdpi-item label="">
+      <small class="hint">
+        Optional. Overrides the key's top title (default <b>Session</b>,
+        <b>Weekly</b>, <b>Tokens</b>, …). Try <code>5h Session</code> or
+        <code>Woche</code>. Leave blank to keep the metric's name.
+      </small>
+    </sdpi-item>
+
     <sdpi-item label="Amber at">
       <sdpi-range setting="warn" min="0" max="100" step="5" default="50" showlabels></sdpi-range>
     </sdpi-item>

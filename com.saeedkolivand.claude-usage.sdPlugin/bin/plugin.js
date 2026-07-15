@@ -17419,28 +17419,56 @@ function color(pct, warn, crit) {
 function esc2(s) {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+function textWidthEm(s) {
+  let w = 0;
+  for (const ch of s) {
+    if (" fijltr.,:;'!|".includes(ch)) w += 0.3;
+    else if ("mwMW".includes(ch)) w += 0.92;
+    else if (ch >= "A" && ch <= "Z") w += 0.72;
+    else w += 0.56;
+  }
+  return w;
+}
 function svgKey(opts) {
   const size = 144;
-  const cx = 72;
-  const cy = 73;
-  const r = 38;
-  const sw = 9;
+  const midX = size / 2;
+  const cx = 50;
+  const cy = 80;
+  const r = 35;
+  const sw = 7;
   const circ = 2 * Math.PI * r;
   const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
   const dash = p / 100 * circ;
   const pctText = opts.pct == null ? "--" : `${Math.round(opts.pct)}%`;
-  const pctSize = pctText.length >= 4 ? 22 : 28;
+  const pctSize = pctText.length >= 4 ? 16 : 20;
   const pctBaseline = cy + Math.round(pctSize * 0.34);
-  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : "#e5e7eb";
+  const titleFill = "#9ca3af";
+  const glance = 21;
+  let labelSize = glance;
+  const labelW = textWidthEm(opts.label);
+  while (labelSize > 12 && labelW * labelSize > 130) labelSize -= 1;
+  const isCountdown = /^(?:\d+d \d+h|\d+h \d+m|\d+m)$/.test(opts.note);
+  let noteMarkup;
+  if (isCountdown) {
+    const cdSize = glance;
+    const asideX = 118;
+    const aside = (t, y) => `<text x="${asideX}" y="${y}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${cdSize}" font-weight="700" fill="${noteFill}">${esc2(t)}</text>`;
+    const parts = opts.note.split(" ");
+    noteMarkup = parts.length === 2 ? `${aside(parts[0], cy - 5)}
+  ${aside(parts[1], cy + 19)}` : aside(opts.note, cy + Math.round(cdSize * 0.34));
+  } else {
+    noteMarkup = `<text x="${midX}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc2(opts.note)}</text>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#e5e7eb">${esc2(opts.label)}</text>
+  <text x="${midX}" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${titleFill}">${esc2(opts.label)}</text>
   <g transform="rotate(-90 ${cx} ${cy})">
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#3a4250" stroke-width="${sw}"/>
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${opts.col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circ.toFixed(2)}"/>
   </g>
   <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="#ffffff">${pctText}</text>
-  <text x="${cx}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc2(opts.note)}</text>
+  ${noteMarkup}
 </svg>`;
 }
 function toDataUri(svg) {
@@ -17612,9 +17640,12 @@ function svgStat(opts) {
   const valSize = len <= 4 ? 40 : len === 5 ? 34 : 28;
   const valBaseline = 82 + Math.round((40 - valSize) * 0.2);
   const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  let labelSize = 18;
+  const labelW = textWidthEm(opts.label);
+  while (labelSize > 12 && labelW * labelSize > 130) labelSize -= 1;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#e5e7eb">${esc2(opts.label)}</text>
+  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="#e5e7eb">${esc2(opts.label)}</text>
   <rect x="${cx - 16}" y="42" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
   <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc2(opts.value)}</text>
   <text x="${cx}" y="120" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="${noteFill}">${esc2(opts.sub)}</text>
@@ -17634,7 +17665,7 @@ var LOG_METRICS = /* @__PURE__ */ new Set([
 var visible = /* @__PURE__ */ new Set();
 async function draw(act, s) {
   const metric = s.metric || "session";
-  if (LOG_METRICS.has(metric)) return drawStat(act, metric);
+  if (LOG_METRICS.has(metric)) return drawStat(act, s, metric);
   return drawGauge(act, s, metric);
 }
 async function drawGauge(act, s, metric) {
@@ -17642,10 +17673,11 @@ async function drawGauge(act, s, metric) {
   const { data, error: error40 } = await fetchUsage(ua, false);
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
+  const title = (s.title || "").trim();
   if (!data) {
     const note2 = error40 === "no-token" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
     await act.setImage(
-      toDataUri(svgKey({ label: "Claude", pct: null, note: note2, col: color(null, warn, crit), stale: true }))
+      toDataUri(svgKey({ label: title || "Claude", pct: null, note: note2, col: color(null, warn, crit), stale: true }))
     );
     return;
   }
@@ -17653,14 +17685,15 @@ async function drawGauge(act, s, metric) {
   const stale = !!error40;
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   await act.setImage(
-    toDataUri(svgKey({ label, pct, note, col: color(pct, warn, crit), stale }))
+    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale }))
   );
 }
-async function drawStat(act, metric) {
+async function drawStat(act, s, metric) {
   const stats = await getLogStats(false);
+  const title = (s.title || "").trim();
   if (!stats.ok) {
     await act.setImage(
-      toDataUri(svgStat({ label: "Claude", value: "--", sub: "no logs", accent: ACCENT, stale: true }))
+      toDataUri(svgStat({ label: title || "Claude", value: "--", sub: "no logs", accent: ACCENT, stale: true }))
     );
     return;
   }
@@ -17693,7 +17726,7 @@ async function drawStat(act, metric) {
     sub = "session";
   }
   await act.setImage(
-    toDataUri(svgStat({ label, value, sub, accent: ACCENT, stale: false }))
+    toDataUri(svgStat({ label: title || label, value, sub, accent: ACCENT, stale: false }))
   );
 }
 async function refreshAll(force) {

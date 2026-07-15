@@ -147,6 +147,20 @@ function esc(s: string): string {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Rough Arial advance widths (in em) — enough to fit the title to the key width
+// without measuring real glyphs. Narrow chars, the wide m/w/M/W, and capitals
+// are grouped; everything else is treated as a mid-width glyph.
+function textWidthEm(s: string): number {
+  let w = 0;
+  for (const ch of s) {
+    if (" fijltr.,:;'!|".includes(ch)) w += 0.3;
+    else if ("mwMW".includes(ch)) w += 0.92;
+    else if (ch >= "A" && ch <= "Z") w += 0.72;
+    else w += 0.56;
+  }
+  return w;
+}
+
 export function svgKey(opts: {
   label: string;
   pct: number | null;
@@ -155,28 +169,63 @@ export function svgKey(opts: {
   stale: boolean;
 }): string {
   const size = 144;
-  const cx = 72;
-  const cy = 73; // ring center nudged up so the bottom note has room
-  const r = 38; // smaller radius so the label above and note below both clear the ring
-  const sw = 9; // thinner stroke leaves more room for the number inside
+  const midX = size / 2; // 72 — canvas center, for the top title and wide status notes
+  const cx = 50; // ring shifted left so the reset countdown gets its own column on the right
+  const cy = 80; // ring center dropped a little so the title above still clears it
+  const r = 35; // smaller ring frees a wider column on the right for the countdown
+  const sw = 7; // thinner stroke → larger clear area inside for the number
   const circ = 2 * Math.PI * r;
   const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
   const dash = (p / 100) * circ;
   const pctText = opts.pct == null ? "--" : `${Math.round(opts.pct)}%`;
-  // Shrink the number for 4-char values like "100%" so it always fits inside the ring.
-  const pctSize = pctText.length >= 4 ? 22 : 28;
+  // Shrink the number for 4-char values like "100%" so it always clears the ring.
+  const pctSize = pctText.length >= 4 ? 16 : 20;
   const pctBaseline = cy + Math.round(pctSize * 0.34); // optical vertical centering
-  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  // Countdown (and status notes) take the bright tone; the title takes the muted
+  // gray — swapped from the obvious pairing so the remaining time reads first.
+  const noteFill = opts.stale ? "#f59e0b" : "#e5e7eb";
+  const titleFill = "#9ca3af";
+  // Title and reset countdown share one "read-at-a-glance" size so the two pieces
+  // of text on the key match. Fit the title by actual width, not character count,
+  // so short custom titles keep the full size (matching the built-in "Session" /
+  // "Weekly") and only a genuinely wide one steps down to stay inside the key.
+  const glance = 21;
+  let labelSize = glance;
+  const labelW = textWidthEm(opts.label);
+  while (labelSize > 12 && labelW * labelSize > 130) labelSize -= 1;
+
+  // The note slot carries two very different strings: a short reset countdown
+  // ("2h 14m", "4d 6h", "45m") on a live gauge, or a wider status word
+  // ("open Claude", "offline", "n/a here", "--") when there's no data. Only the
+  // countdown is narrow enough to sit beside the ring; place it there — big and
+  // bold, stacked when it has two parts — and fall back to the old full-width
+  // line under the ring for everything else, which stays readable.
+  const isCountdown = /^(?:\d+d \d+h|\d+h \d+m|\d+m)$/.test(opts.note);
+  let noteMarkup: string;
+  if (isCountdown) {
+    const cdSize = glance; // reset countdown matches the title size
+    const asideX = 118; // center of the free column to the right of the ring
+    const aside = (t: string, y: number) =>
+      `<text x="${asideX}" y="${y}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${cdSize}" font-weight="700" fill="${noteFill}">${esc(t)}</text>`;
+    const parts = opts.note.split(" ");
+    noteMarkup =
+      parts.length === 2
+        ? `${aside(parts[0], cy - 5)}
+  ${aside(parts[1], cy + 19)}`
+        : aside(opts.note, cy + Math.round(cdSize * 0.34));
+  } else {
+    noteMarkup = `<text x="${midX}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc(opts.note)}</text>`;
+  }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#e5e7eb">${esc(opts.label)}</text>
+  <text x="${midX}" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${titleFill}">${esc(opts.label)}</text>
   <g transform="rotate(-90 ${cx} ${cy})">
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#3a4250" stroke-width="${sw}"/>
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${opts.col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circ.toFixed(2)}"/>
   </g>
   <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="#ffffff">${pctText}</text>
-  <text x="${cx}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc(opts.note)}</text>
+  ${noteMarkup}
 </svg>`;
 }
 
@@ -420,10 +469,15 @@ export function svgStat(opts: {
   const valSize = len <= 4 ? 40 : len === 5 ? 34 : 28;
   const valBaseline = 82 + Math.round((40 - valSize) * 0.2);
   const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  // Fit a custom title to the tile by width, mirroring svgKey, so a long override
+  // doesn't overflow the canvas; the built-in "Tokens" / "Cost" stay at 18.
+  let labelSize = 18;
+  const labelW = textWidthEm(opts.label);
+  while (labelSize > 12 && labelW * labelSize > 130) labelSize -= 1;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#e5e7eb">${esc(opts.label)}</text>
+  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="#e5e7eb">${esc(opts.label)}</text>
   <rect x="${cx - 16}" y="42" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
   <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
   <text x="${cx}" y="120" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="${noteFill}">${esc(opts.sub)}</text>

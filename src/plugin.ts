@@ -28,6 +28,7 @@ type Settings = {
   warn?: number;
   crit?: number;
   userAgent?: string;
+  title?: string; // optional custom key title; overrides the metric's default label
 };
 
 const ACCENT = "#d97757"; // Claude coral, used on stat tiles
@@ -45,7 +46,7 @@ const visible = new Set<any>();
 
 async function draw(act: any, s: Settings): Promise<void> {
   const metric = s.metric || "session";
-  if (LOG_METRICS.has(metric)) return drawStat(act, metric);
+  if (LOG_METRICS.has(metric)) return drawStat(act, s, metric);
   return drawGauge(act, s, metric);
 }
 
@@ -54,12 +55,13 @@ async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   const { data, error } = await fetchUsage(ua, false); // honors the shared cache
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
+  const title = (s.title || "").trim(); // custom label; empty = use the metric default
 
   if (!data) {
     const note =
       error === "no-token" ? "open Claude" : error === "network" ? "offline" : "…";
     await act.setImage(
-      toDataUri(svgKey({ label: "Claude", pct: null, note, col: color(null, warn, crit), stale: true })),
+      toDataUri(svgKey({ label: title || "Claude", pct: null, note, col: color(null, warn, crit), stale: true })),
     );
     return;
   }
@@ -68,15 +70,16 @@ async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   const stale = !!error; // we have cached data but the latest refresh failed
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   await act.setImage(
-    toDataUri(svgKey({ label, pct, note, col: color(pct, warn, crit), stale })),
+    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale })),
   );
 }
 
-async function drawStat(act: any, metric: string): Promise<void> {
+async function drawStat(act: any, s: Settings, metric: string): Promise<void> {
   const stats = await getLogStats(false); // honors its own 30s cache
+  const title = (s.title || "").trim(); // custom label; empty = use the metric default
   if (!stats.ok) {
     await act.setImage(
-      toDataUri(svgStat({ label: "Claude", value: "--", sub: "no logs", accent: ACCENT, stale: true })),
+      toDataUri(svgStat({ label: title || "Claude", value: "--", sub: "no logs", accent: ACCENT, stale: true })),
     );
     return;
   }
@@ -98,7 +101,7 @@ async function drawStat(act: any, metric: string): Promise<void> {
     label = "Cost"; value = fmtCost(stats.sessionCost); sub = "session";
   }
   await act.setImage(
-    toDataUri(svgStat({ label, value, sub, accent: ACCENT, stale: false })),
+    toDataUri(svgStat({ label: title || label, value, sub, accent: ACCENT, stale: false })),
   );
 }
 
