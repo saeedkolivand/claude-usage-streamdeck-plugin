@@ -17315,6 +17315,14 @@ var ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 var DEFAULT_UA = "claude-code/2.0.31";
 var CACHE_TTL_MS = 55e3;
 var cache = { at: 0, data: null };
+var STALE_AFTER_MS = 3 * 6e4;
+function failResult(error40) {
+  return {
+    data: cache.data,
+    error: error40,
+    stale: cache.data != null && Date.now() - cache.at > STALE_AFTER_MS
+  };
+}
 function credentialsPath() {
   return (0, import_node_path6.join)((0, import_node_os.homedir)(), ".claude", ".credentials.json");
 }
@@ -17357,8 +17365,9 @@ async function fetchUsage(ua, force = false) {
   if (!force && cache.data && now - cache.at < CACHE_TTL_MS) {
     return { data: cache.data };
   }
-  const { token } = readToken();
-  if (!token) return { data: cache.data, error: "no-token" };
+  const { token, expired } = readToken();
+  if (!token) return failResult("no-token");
+  if (expired) return failResult("token-expired");
   try {
     const res = await fetch(ENDPOINT, {
       method: "GET",
@@ -17372,12 +17381,12 @@ async function fetchUsage(ua, force = false) {
         Accept: "application/json, text/plain, */*"
       }
     });
-    if (!res.ok) return { data: cache.data, error: `http-${res.status}` };
+    if (!res.ok) return failResult(`http-${res.status}`);
     const data = await res.json();
     cache = { at: now, data };
     return { data };
   } catch {
-    return { data: cache.data, error: "network" };
+    return failResult("network");
   }
 }
 var METRICS = {
@@ -17670,22 +17679,21 @@ async function draw(act, s) {
 }
 async function drawGauge(act, s, metric) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
-  const { data, error: error40 } = await fetchUsage(ua, false);
+  const { data, error: error40, stale } = await fetchUsage(ua, false);
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const title = (s.title || "").trim();
   if (!data) {
-    const note2 = error40 === "no-token" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
+    const note2 = error40 === "no-token" || error40 === "token-expired" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
     await act.setImage(
       toDataUri(svgKey({ label: title || "Claude", pct: null, note: note2, col: color(null, warn, crit), stale: true }))
     );
     return;
   }
   const { label, pct, resetsAt } = pickMetric(data, metric);
-  const stale = !!error40;
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   await act.setImage(
-    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale }))
+    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale }))
   );
 }
 async function drawStat(act, s, metric) {

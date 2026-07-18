@@ -16,11 +16,27 @@ export type UsageData = {
   [k: string]: unknown;
 };
 
-export type FetchResult = { data: UsageData | null; error?: string };
+export type FetchResult = { data: UsageData | null; error?: string; stale?: boolean };
 
 // Module-level cache shared across all key instances in the plugin process,
 // so 3-4 keys produce a single network call per minute, not 3-4.
 let cache: { at: number; data: UsageData | null } = { at: 0, data: null };
+
+// How old the cached data may get before a failing refresh is surfaced as
+// stale. A single failed poll out of the 60s cadence self-heals within a
+// minute and shouldn't flash the keys amber; once the numbers on screen are
+// ~3 missed polls old, that's worth showing. Age-based on purpose: during an
+// outage every visible key retries the fetch, so counting failures would
+// scale with the number of keys, not with elapsed time.
+const STALE_AFTER_MS = 3 * 60_000;
+
+function failResult(error: string): FetchResult {
+  return {
+    data: cache.data,
+    error,
+    stale: cache.data != null && Date.now() - cache.at > STALE_AFTER_MS,
+  };
+}
 
 export function credentialsPath(): string {
   // Windows: %USERPROFILE%\.claude\.credentials.json  (homedir() resolves USERPROFILE)
@@ -74,8 +90,11 @@ export async function fetchUsage(ua: string, force = false): Promise<FetchResult
   if (!force && cache.data && now - cache.at < CACHE_TTL_MS) {
     return { data: cache.data };
   }
-  const { token } = readToken();
-  if (!token) return { data: cache.data, error: "no-token" };
+  const { token, expired } = readToken();
+  if (!token) return failResult("no-token");
+  // A token the credentials already mark as expired guarantees a 401 — skip
+  // the request and wait for Claude Code to write a refreshed one.
+  if (expired) return failResult("token-expired");
 
   try {
     const res = await fetch(ENDPOINT, {
@@ -90,12 +109,12 @@ export async function fetchUsage(ua: string, force = false): Promise<FetchResult
         Accept: "application/json, text/plain, */*",
       },
     });
-    if (!res.ok) return { data: cache.data, error: `http-${res.status}` };
+    if (!res.ok) return failResult(`http-${res.status}`);
     const data = (await res.json()) as UsageData;
     cache = { at: now, data };
     return { data };
   } catch {
-    return { data: cache.data, error: "network" };
+    return failResult("network");
   }
 }
 

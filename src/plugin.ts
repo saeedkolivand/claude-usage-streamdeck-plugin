@@ -52,14 +52,18 @@ async function draw(act: any, s: Settings): Promise<void> {
 
 async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
-  const { data, error } = await fetchUsage(ua, false); // honors the shared cache
+  const { data, error, stale } = await fetchUsage(ua, false); // honors the shared cache
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const title = (s.title || "").trim(); // custom label; empty = use the metric default
 
   if (!data) {
     const note =
-      error === "no-token" ? "open Claude" : error === "network" ? "offline" : "…";
+      error === "no-token" || error === "token-expired"
+        ? "open Claude"
+        : error === "network"
+          ? "offline"
+          : "…";
     await act.setImage(
       toDataUri(svgKey({ label: title || "Claude", pct: null, note, col: color(null, warn, crit), stale: true })),
     );
@@ -67,10 +71,11 @@ async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   }
 
   const { label, pct, resetsAt } = pickMetric(data, metric);
-  const stale = !!error; // we have cached data but the latest refresh failed
   const note = pct == null ? "n/a here" : untilText(resetsAt);
+  // stale comes from fetchUsage: cached data older than its debounce window,
+  // not merely "the latest refresh failed" — a single blip stays bright.
   await act.setImage(
-    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale })),
+    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale })),
   );
 }
 
