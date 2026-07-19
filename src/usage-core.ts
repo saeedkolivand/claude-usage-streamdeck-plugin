@@ -206,8 +206,14 @@ export function svgKey(opts: {
 }): string {
   const size = 144;
   const midX = size / 2; // 72 — canvas center, for the top title and wide status notes
-  const cx = 50; // ring shifted left so the reset countdown gets its own column on the right
-  const cy = 80; // ring center dropped a little so the title above still clears it
+  // Margins settled by side-by-side testing on hardware: the countdown ends a
+  // fixed 6 units from the right edge, the ring's ink sits 3 from the left.
+  // Deliberately unequal numbers that LOOK equal on a key: the ring is round —
+  // only its equator reaches the margin — and its dark track all but vanishes
+  // on LCDs, so the left gap reads far wider than it measures. The text is a
+  // solid bright block and reads at face value.
+  const cx = 41.5; // = 3 + outer radius 38.5
+  const cy = 82; // gap title→ring top = gap ring bottom→key edge (A = B)
   const r = 35; // smaller ring frees a wider column on the right for the countdown
   const sw = 7; // thinner stroke → larger clear area inside for the number
   const circ = 2 * Math.PI * r;
@@ -239,16 +245,28 @@ export function svgKey(opts: {
   const isCountdown = /^(?:\d+d \d+h|\d+h \d+m|\d+m)$/.test(opts.note);
   let noteMarkup: string;
   if (isCountdown) {
-    const cdSize = glance; // reset countdown matches the title size
-    const asideX = 118; // center of the free column to the right of the ring
-    const aside = (t: string, y: number) =>
-      `<text x="${asideX}" y="${y}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${cdSize}" font-weight="700" fill="${noteFill}">${esc(t)}</text>`;
+    // Right-anchored at a fixed edge so every line ends 6 units from the key
+    // edge on any renderer — a centered anchor lets a wider host font grow the
+    // text into the margin (seen on Stream Deck hardware), and drifts with the
+    // text's width. Anchored, all values share one right edge.
+    const edgeX = size - 6;
     const parts = opts.note.split(" ");
+    const lines = parts.length === 2 ? parts : [opts.note];
+    // Growing left from the fixed edge must never run into the ring: fit the
+    // countdown so its widest line keeps ≥6 units of air to the ring's outer
+    // stroke. Host fonts render wider than the design font, hence the 1.08 on
+    // the width estimate. At the shipped margins this never triggers.
+    const avail = edgeX - (cx + r + sw / 2) - 6;
+    const widestEm = Math.max(...lines.map(textWidthEm)) * 1.08;
+    let cdSize = glance;
+    while (cdSize > 15 && widestEm * cdSize > avail) cdSize -= 1;
+    const aside = (t: string, y: number) =>
+      `<text x="${edgeX}" y="${y}" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="${cdSize}" font-weight="700" fill="${noteFill}">${esc(t)}</text>`;
     noteMarkup =
-      parts.length === 2
-        ? `${aside(parts[0], cy - 5)}
-  ${aside(parts[1], cy + 19)}`
-        : aside(opts.note, cy + Math.round(cdSize * 0.34));
+      lines.length === 2
+        ? `${aside(lines[0], cy - 5)}
+  ${aside(lines[1], cy + 19)}`
+        : aside(lines[0], cy + Math.round(cdSize * 0.34));
   } else {
     noteMarkup = `<text x="${midX}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc(opts.note)}</text>`;
   }

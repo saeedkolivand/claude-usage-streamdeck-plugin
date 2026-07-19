@@ -17451,8 +17451,8 @@ function textWidthEm(s) {
 function svgKey(opts) {
   const size = 144;
   const midX = size / 2;
-  const cx = 50;
-  const cy = 80;
+  const cx = 41.5;
+  const cy = 82;
   const r = 35;
   const sw = 7;
   const circ = 2 * Math.PI * r;
@@ -17470,12 +17470,16 @@ function svgKey(opts) {
   const isCountdown = /^(?:\d+d \d+h|\d+h \d+m|\d+m)$/.test(opts.note);
   let noteMarkup;
   if (isCountdown) {
-    const cdSize = glance;
-    const asideX = 118;
-    const aside = (t, y) => `<text x="${asideX}" y="${y}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${cdSize}" font-weight="700" fill="${noteFill}">${esc2(t)}</text>`;
+    const edgeX = size - 6;
     const parts = opts.note.split(" ");
-    noteMarkup = parts.length === 2 ? `${aside(parts[0], cy - 5)}
-  ${aside(parts[1], cy + 19)}` : aside(opts.note, cy + Math.round(cdSize * 0.34));
+    const lines = parts.length === 2 ? parts : [opts.note];
+    const avail = edgeX - (cx + r + sw / 2) - 6;
+    const widestEm = Math.max(...lines.map(textWidthEm)) * 1.08;
+    let cdSize = glance;
+    while (cdSize > 15 && widestEm * cdSize > avail) cdSize -= 1;
+    const aside = (t, y) => `<text x="${edgeX}" y="${y}" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="${cdSize}" font-weight="700" fill="${noteFill}">${esc2(t)}</text>`;
+    noteMarkup = lines.length === 2 ? `${aside(lines[0], cy - 5)}
+  ${aside(lines[1], cy + 19)}` : aside(lines[0], cy + Math.round(cdSize * 0.34));
   } else {
     noteMarkup = `<text x="${midX}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc2(opts.note)}</text>`;
   }
