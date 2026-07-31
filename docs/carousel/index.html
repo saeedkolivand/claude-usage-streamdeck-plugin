@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Rendered key art from PR #9 of the AI Coding Usage Meter Stream Deck plugin.">
+<meta name="robots" content="noindex">
+<title>PR #9 — carousel metric</title>
+<style>
+  :root {
+    --ground: #14171c; --card: #191d24; --line: #262c35;
+    --ink: #e8eaee; --muted: #8b93a1;
+    --fuchsia: #e879f9; --sky: #38bdf8;
+    --sans: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --ground: #f2f3f6; --card: #ffffff; --line: #e0e3e9; --ink: #171a1f; --muted: #626a78;
+            --fuchsia: #a21caf; --sky: #0369a1; }
+  }
+  :root[data-theme="dark"] { --ground: #14171c; --card: #191d24; --line: #262c35; --ink: #e8eaee; --muted: #8b93a1;
+                             --fuchsia: #e879f9; --sky: #38bdf8; }
+  :root[data-theme="light"] { --ground: #f2f3f6; --card: #ffffff; --line: #e0e3e9; --ink: #171a1f; --muted: #626a78;
+                              --fuchsia: #a21caf; --sky: #0369a1; }
+
+  body { background: var(--ground); color: var(--ink); font-family: var(--sans); line-height: 1.5;
+         margin: 0; padding: 40px 28px 72px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+  .wrap { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 38px; }
+  header { display: flex; flex-direction: column; gap: 10px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-size: clamp(24px, 4vw, 32px); font-weight: 650; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--fuchsia); }
+  h1 em + em { color: var(--sky); }
+  .lede { color: var(--muted); max-width: 62ch; margin: 0; }
+  section { display: flex; flex-direction: column; gap: 16px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+       display: flex; align-items: baseline; gap: 10px; }
+  h2 span { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+  .grid { display: flex; flex-wrap: wrap; gap: 22px; }
+  figure { margin: 0; width: 148px; display: flex; flex-direction: column; gap: 10px; }
+  .key { width: 144px; height: 144px; border-radius: 20px; overflow: hidden; background: #0f1216;
+         box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 20px -12px rgba(0,0,0,.6); }
+  .key svg { display: block; width: 144px; height: 144px; }
+  figcaption { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+  figcaption b { font-weight: 600; }
+  figcaption span { color: var(--muted); font-size: 11px; line-height: 1.35; }
+  ul { margin: 0; padding-left: 18px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; max-width: 66ch; }
+  ul b { color: var(--ink); font-weight: 600; }
+  code { font-family: var(--mono); font-size: .92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">PR #9 · feat/carousel-metric · ffapd1989</div>
+    <h1>One key that alternates <em>5&nbsp;hours</em> and <em>weekly</em></h1>
+    <p class="lede">A new <code>carousel</code> metric with its own full-bleed key art — no ring, big percentage, slim bar,
+      page dots. Rendered from the PR branch at true key size (144×144). The existing gauges and stat tiles are untouched.</p>
+  </header>
+
+  <section>
+    <h2>The rotation <span>flips every N seconds · tap to flip now</span></h2>
+    <div class="grid"><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(11.440000000000012 9.579999999999998) scale(1.0625)" fill="none" stroke="#e879f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/></g><text x="34.44000000000001" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#e879f9">5 HOURS</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#f0abfc">34<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/><rect x="22" y="92" width="34.0" height="14" rx="7" fill="#f0abfc"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#f5d0fe">2h 41m</text>
+  <circle cx="65" cy="138" r="3.5" fill="#e879f9"/><circle cx="79" cy="138" r="3.5" fill="#4b5563"/>
+</svg></div><figcaption><b>Face 1 — 5 hours</b><span>clock icon, fuchsia family, left dot lit</span></figcaption></figure><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(10.780000000000001 9.579999999999998) scale(1.0625)" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/></g><text x="33.78" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#38bdf8">WEEKLY</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#7dd3fc">62<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/><rect x="22" y="92" width="62.0" height="14" rx="7" fill="#7dd3fc"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#bae6fd">3d 4h</text>
+  <circle cx="65" cy="138" r="3.5" fill="#4b5563"/><circle cx="79" cy="138" r="3.5" fill="#38bdf8"/>
+</svg></div><figcaption><b>Face 2 — weekly</b><span>calendar icon, sky family, right dot lit</span></figcaption></figure></div>
+  </section>
+
+  <section>
+    <h2>States <span>thresholds recolor the % and bar only</span></h2>
+    <div class="grid"><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(11.440000000000012 9.579999999999998) scale(1.0625)" fill="none" stroke="#e879f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/></g><text x="34.44000000000001" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#e879f9">5 HOURS</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#f59e0b">71<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/><rect x="22" y="92" width="71.0" height="14" rx="7" fill="#f59e0b"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#f5d0fe">1h 12m</text>
+  <circle cx="65" cy="138" r="3.5" fill="#e879f9"/><circle cx="79" cy="138" r="3.5" fill="#4b5563"/>
+</svg></div><figcaption><b>Past Amber</b><span>% and bar leave the family tone</span></figcaption></figure><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(10.780000000000001 9.579999999999998) scale(1.0625)" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/></g><text x="33.78" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#38bdf8">WEEKLY</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#ef4444">93<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/><rect x="22" y="92" width="93.0" height="14" rx="7" fill="#ef4444"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#bae6fd">18h</text>
+  <circle cx="65" cy="138" r="3.5" fill="#4b5563"/><circle cx="79" cy="138" r="3.5" fill="#38bdf8"/>
+</svg></div><figcaption><b>Past Red</b><span>header and countdown stay in family</span></figcaption></figure><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(11.440000000000012 9.579999999999998) scale(1.0625)" fill="none" stroke="#e879f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/></g><text x="34.44000000000001" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#e879f9">5 HOURS</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="800" fill="#ef4444">100<tspan font-size="21" font-weight="700">%</tspan></text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/><rect x="22" y="92" width="100.0" height="14" rx="7" fill="#ef4444"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#f5d0fe">44m</text>
+  <circle cx="65" cy="138" r="3.5" fill="#e879f9"/><circle cx="79" cy="138" r="3.5" fill="#4b5563"/>
+</svg></div><figcaption><b>100%</b><span>three digits step the font down 48→42</span></figcaption></figure><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(11.440000000000012 9.579999999999998) scale(1.0625)" fill="none" stroke="#e879f9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/></g><text x="34.44000000000001" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#e879f9">5 HOURS</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#9ca3af">--</text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#f59e0b">open Claude</text>
+  <circle cx="65" cy="138" r="3.5" fill="#e879f9"/><circle cx="79" cy="138" r="3.5" fill="#4b5563"/>
+</svg></div><figcaption><b>No token</b><span>“--”, amber note, empty bar</span></figcaption></figure><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <g transform="translate(10.720000000000006 10.66) scale(1.0625)" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/></g><text x="33.720000000000006" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#22c55e">SEMANAL</text>
+  <text x="72" y="80" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" fill="#86efac">47<tspan font-size="24" font-weight="700">%</tspan></text>
+  <rect x="22" y="92" width="100" height="14" rx="7" fill="#2a313d"/><rect x="22" y="92" width="47.0" height="14" rx="7" fill="#86efac"/>
+  <text x="72" y="129" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#bbf7d0">5d 2h</text>
+  <circle cx="65" cy="138" r="3.5" fill="#4b5563"/><circle cx="79" cy="138" r="3.5" fill="#22c55e"/>
+</svg></div><figcaption><b>Custom label + color</b><span>per-key override, shades derived by tint()</span></figcaption></figure></div>
+  </section>
+
+  <section>
+    <h2>What it replaces <span>two keys, or one you kept switching by hand</span></h2>
+    <div class="grid"><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <text x="72" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#9ca3af">Session</text>
+  <g transform="rotate(-90 41.5 82)">
+    <circle cx="41.5" cy="82" r="35" fill="none" stroke="#3a4250" stroke-width="7"/>
+    <circle cx="41.5" cy="82" r="35" fill="none" stroke="#22c55e" stroke-width="7" stroke-linecap="round" stroke-dasharray="74.77 219.91"/>
+  </g>
+  <text x="41.5" y="89" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="800" fill="#ffffff">34%</text>
+  <text x="138" y="77" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#e5e7eb">2h</text>
+  <text x="138" y="101" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#e5e7eb">41m</text>
+</svg></div><figcaption><b>Session gauge</b><span>unchanged by this PR</span></figcaption></figure><figure><div class="key"><svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="20" fill="#0f1216"/>
+  <text x="72" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#9ca3af">Weekly</text>
+  <g transform="rotate(-90 41.5 82)">
+    <circle cx="41.5" cy="82" r="35" fill="none" stroke="#3a4250" stroke-width="7"/>
+    <circle cx="41.5" cy="82" r="35" fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round" stroke-dasharray="136.35 219.91"/>
+  </g>
+  <text x="41.5" y="89" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="800" fill="#ffffff">62%</text>
+  <text x="138" y="77" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#e5e7eb">3d</text>
+  <text x="138" y="101" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#e5e7eb">4h</text>
+</svg></div><figcaption><b>Weekly gauge</b><span>unchanged by this PR</span></figcaption></figure></div>
+  </section>
+
+  <section>
+    <h2>Property Inspector</h2>
+    <ul>
+      <li><b>Carousel</b> is now the first option in the Metric dropdown, above Session and Weekly.</li>
+      <li>Settings are grouped and shown per metric — picking Carousel reveals auto-rotate, interval, and per-face label/color; picking a log metric reveals a new <b>Subtitle</b> field; Title hides for Carousel.</li>
+      <li>The interval row label mirrors the slider live — <code>Interval: 12 s</code>.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>
