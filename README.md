@@ -39,6 +39,7 @@ at once. Two families:
 | --- | --- | --- | --- |
 | **Session (5h)** | Limit (live) | `oauth/usage` endpoint (same as Claude Code's `/usage`) | big % + ring gauge + reset countdown |
 | **Weekly (7d)** | Limit (live) | same endpoint | big % + ring gauge + reset countdown |
+| **Carousel (5h ↔ 7d)** | Limit (live) | same endpoint | one key alternating both windows: big %, progress bar, reset countdown, page dots — auto-rotates on a timer and/or switches on key press |
 | **Tokens** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `1.2M`) + `today` / `7 days` / `session` |
 | **Cost** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `$8.40`) + `today` / `7 days` / `session` |
 
@@ -89,9 +90,12 @@ Select the key, then open its property inspector (panel below the canvas):
 
 | Field | What it does |
 | --- | --- |
-| **Metric** | Which value the key shows: Session / Weekly (live limits), or Tokens / Cost for today / 7 days / session. |
-| **Amber threshold** | % where a live limit gauge turns amber (default `50`). |
-| **Red threshold** | % where a live limit gauge turns red (default `80`). |
+| **Metric** | Which value the key shows: Carousel / Session / Weekly (live limits), or Tokens / Cost for today / 7 days / session. |
+| **Auto-rotate & Interval** (Carousel) | Whether the carousel flips between the 5-hour and weekly faces on its own, and every how many seconds (default `10`). Pressing the key always flips immediately. |
+| **5h / Weekly label & color** (Carousel) | Per-face label (defaults `5 HOURS` / `WEEKLY` — localize freely) and base color; the % / bar / countdown tints derive from the base color. |
+| **Subtitle** (Tokens / Cost) | Overrides the scope line under the value (`today` / `7 days` / `session`) — handy for localization. |
+| **Amber threshold** | % where a live limit metric turns amber (default `50`). |
+| **Red threshold** | % where a live limit metric turns red (default `80`). |
 | **User-Agent** (Advanced) | Sent to the usage endpoint; must start with `claude-code/` (default `claude-code/2.0.31`). Bump it if Anthropic ever tightens the check. |
 
 ## Verify the data layer first (optional but handy)

@@ -509,6 +509,106 @@ export function fmtCost(n: number): string {
   return "$" + n.toFixed(2);
 }
 
+// Big face for the carousel: icon + label on top in the face's signature
+// accent, huge % centered (colored by the warn/crit thresholds), a slim
+// progress bar, reset countdown below, page dots at the bottom. The accent
+// gives each window its own identity; the % and bar keep the semantic
+// green/amber/red so "how close to the limit" never changes meaning.
+export type FaceIcon = "clock" | "calendar";
+
+function iconMarkup(icon: FaceIcon, x: number, y: number, sizePx: number, stroke: string): string {
+  // Icons drawn on a 16x16 grid, scaled to sizePx, stroke-only for crispness.
+  const s = sizePx / 16;
+  const g = (inner: string) =>
+    `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+  if (icon === "clock") {
+    return g(`<circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/>`);
+  }
+  // calendar: body, binder tabs, header line
+  return g(
+    `<rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/>`,
+  );
+}
+
+export function svgBig(opts: {
+  label: string;
+  pct: number | null;
+  note: string;
+  col: string;
+  stale: boolean;
+  face?: number;
+  faces?: number;
+  accent?: string; // signature color of this face (label, icon, active dot)
+  icon?: FaceIcon;
+  noteCol?: string; // countdown tint (family shade); stale amber still wins
+}): string {
+  const size = 144;
+  const cx = 72;
+  const accent = opts.accent || "#9ca3af";
+  const pctNum = opts.pct == null ? "--" : `${Math.round(opts.pct)}`;
+  // "100" steps down so the number never touches the key edges.
+  const pctSize = pctNum.length >= 3 ? 42 : 48;
+  const symSize = Math.round(pctSize * 0.5); // % symbol reads as a unit, not a digit
+  const pctBaseline = 80;
+  const noteFill = opts.stale ? "#f59e0b" : opts.noteCol || "#e5e7eb";
+  // Fit label and note by estimated width so wide strings ("open Claude")
+  // shrink instead of overflowing; the 1.08 covers wider host fonts. The
+  // header reserves room for the face icon beside the label when present.
+  const iconSize = 17;
+  const iconGap = 6;
+  const headerAvail = opts.icon ? 132 - iconSize - iconGap : 132;
+  let labelSize = 22;
+  while (labelSize > 12 && textWidthEm(opts.label) * labelSize * 1.08 > headerAvail) labelSize -= 1;
+  let noteSize = 25;
+  while (noteSize > 13 && textWidthEm(opts.note) * noteSize * 1.08 > 132) noteSize -= 1;
+
+  // Header: icon + label rendered as one centered group, both in the accent.
+  let header: string;
+  if (opts.icon) {
+    const labelWpx = textWidthEm(opts.label) * labelSize;
+    const startX = cx - (labelWpx + iconSize + iconGap) / 2;
+    const iconY = 26 - labelSize * 0.36 - iconSize / 2; // optical middle of the cap height
+    header =
+      iconMarkup(opts.icon, startX, iconY, iconSize, accent) +
+      `<text x="${startX + iconSize + iconGap}" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${accent}">${esc(opts.label)}</text>`;
+  } else {
+    header = `<text x="${cx}" y="26" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${accent}">${esc(opts.label)}</text>`;
+  }
+
+  let dots = "";
+  if (opts.faces && opts.faces > 1) {
+    const gap = 14;
+    const x0 = cx - ((opts.faces - 1) * gap) / 2;
+    for (let i = 0; i < opts.faces; i++) {
+      dots += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (opts.face ?? 0) ? accent : "#4b5563"}"/>`;
+    }
+  }
+
+  // Slim progress bar between the % and the countdown: dark track always
+  // visible, colored fill proportional to the percentage. rx stays smaller
+  // than half the fill height so tiny fills (<7 units wide) still render.
+  const barX = 22;
+  const barW = size - 2 * barX; // 100
+  const barY = 92;
+  const barH = 14;
+  const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
+  const fillW = (p / 100) * barW;
+  const bar =
+    `<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="${barH / 2}" fill="#2a313d"/>` +
+    (fillW > 0
+      ? `<rect x="${barX}" y="${barY}" width="${fillW.toFixed(1)}" height="${barH}" rx="${barH / 2}" fill="${opts.col}"/>`
+      : "");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  ${header}
+  <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${symSize}" font-weight="700">%</tspan>`}</text>
+  ${bar}
+  <text x="${cx}" y="${opts.faces && opts.faces > 1 ? 129 : 131}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${noteFill}">${esc(opts.note)}</text>
+  ${dots}
+</svg>`;
+}
+
 // Stat tile: label on top, big value centered, scope subtitle below. No ring.
 export function svgStat(opts: {
   label: string;

@@ -25,12 +25,16 @@
         font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
         color: #e6e6e6;
       }
+      .group[hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <sdpi-item label="Metric">
-      <sdpi-select setting="metric" default="session">
+      <sdpi-select setting="metric" default="session" id="metric-select">
         <optgroup label="Limits — live (/usage)">
+          <option value="carousel">Carousel — 5h &#x2194; Weekly</option>
           <option value="session">Session (5h)</option>
           <option value="weekly">Weekly (7d)</option>
         </optgroup>
@@ -45,46 +49,96 @@
       </sdpi-select>
     </sdpi-item>
 
-    <sdpi-item label="Title">
-      <sdpi-textfield setting="title" placeholder="Auto (metric name)" maxlength="16"></sdpi-textfield>
-    </sdpi-item>
-    <sdpi-item label="">
-      <small class="hint">
-        Optional. Overrides the key's top title (default <b>Session</b>,
-        <b>Weekly</b>, <b>Tokens</b>, …). Try <code>5h Session</code> or
-        <code>Woche</code>. Leave blank to keep the metric's name.
-      </small>
-    </sdpi-item>
-
-    <sdpi-item label="Amber at">
-      <sdpi-range setting="warn" min="0" max="100" step="5" default="50" showlabels></sdpi-range>
-    </sdpi-item>
-
-    <sdpi-item label="Red at">
-      <sdpi-range setting="crit" min="0" max="100" step="5" default="80" showlabels></sdpi-range>
-    </sdpi-item>
-    <sdpi-item label="">
-      <small class="hint">
-        Thresholds color the live <b>limit</b> gauges only (Session / Weekly).
-      </small>
-    </sdpi-item>
-
-    <details>
-      <summary>Advanced</summary>
-      <sdpi-item label="User-Agent">
-        <sdpi-textfield
-          setting="userAgent"
-          placeholder="claude-code/2.0.31"
-        ></sdpi-textfield>
+    <!-- Carousel only -->
+    <div class="group" id="group-carousel" hidden>
+      <sdpi-item label="Auto-rotate">
+        <sdpi-checkbox setting="carouselAuto" default="true" label="Switch faces automatically"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="Interval: 10 s" id="carousel-interval-item">
+        <sdpi-range setting="carouselSec" min="3" max="60" step="1" default="10" showlabels id="carousel-interval-range"></sdpi-range>
+      </sdpi-item>
+      <sdpi-item label="5h label">
+        <sdpi-textfield setting="labelSession" placeholder="5 HOURS" maxlength="12"></sdpi-textfield>
+      </sdpi-item>
+      <sdpi-item label="5h color">
+        <sdpi-color setting="colorSession" default="#e879f9"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Weekly label">
+        <sdpi-textfield setting="labelWeekly" placeholder="WEEKLY" maxlength="12"></sdpi-textfield>
+      </sdpi-item>
+      <sdpi-item label="Weekly color">
+        <sdpi-color setting="colorWeekly" default="#38bdf8"></sdpi-color>
       </sdpi-item>
       <sdpi-item label="">
         <small class="hint">
-          Leave blank unless requests start failing. Must begin with
-          <code>claude-code/</code> or the API rate-limits aggressively. Bump the
-          version number if Anthropic tightens the check.
+          The key alternates the <b>5-hour</b> and <b>weekly</b> faces every
+          <i>Interval</i> seconds; pressing the key switches immediately (works
+          even with auto-rotate off). Labels and base colors are per key — e.g.
+          <code>5 HORAS</code> / <code>SEMANAL</code>. The %, bar and countdown
+          tones derive from the base color; past the Amber/Red thresholds the %
+          and bar switch to the alert colors.
         </small>
       </sdpi-item>
-    </details>
+    </div>
+
+    <!-- Single-metric keys (gauges and stat tiles) -->
+    <div class="group" id="group-title" hidden>
+      <sdpi-item label="Title">
+        <sdpi-textfield setting="title" placeholder="Auto (metric name)" maxlength="16"></sdpi-textfield>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          Optional. Overrides the key's top title (default <b>Session</b>,
+          <b>Weekly</b>, <b>Tokens</b>, …). Try <code>5h Session</code> or
+          <code>Woche</code>. Leave blank to keep the metric's name.
+        </small>
+      </sdpi-item>
+    </div>
+
+    <!-- Log metrics only -->
+    <div class="group" id="group-subtitle" hidden>
+      <sdpi-item label="Subtitle">
+        <sdpi-textfield setting="subtitle" placeholder="Auto (today / 7 days / session)" maxlength="16"></sdpi-textfield>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          Overrides the scope line under the value — e.g. <code>hoje</code>,
+          <code>7 dias</code>, <code>sessão</code>.
+        </small>
+      </sdpi-item>
+    </div>
+
+    <!-- Live limit metrics (gauges and carousel) -->
+    <div class="group" id="group-thresholds" hidden>
+      <sdpi-item label="Amber at">
+        <sdpi-range setting="warn" min="0" max="100" step="5" default="50" showlabels></sdpi-range>
+      </sdpi-item>
+      <sdpi-item label="Red at">
+        <sdpi-range setting="crit" min="0" max="100" step="5" default="80" showlabels></sdpi-range>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          Thresholds color the live limit metrics (Session / Weekly / Carousel).
+        </small>
+      </sdpi-item>
+
+      <details>
+        <summary>Advanced</summary>
+        <sdpi-item label="User-Agent">
+          <sdpi-textfield
+            setting="userAgent"
+            placeholder="claude-code/2.0.31"
+          ></sdpi-textfield>
+        </sdpi-item>
+        <sdpi-item label="">
+          <small class="hint">
+            Leave blank unless requests start failing. Must begin with
+            <code>claude-code/</code> or the API rate-limits aggressively. Bump the
+            version number if Anthropic tightens the check.
+          </small>
+        </sdpi-item>
+      </details>
+    </div>
 
     <sdpi-item label="">
       <small class="hint">
@@ -94,5 +148,45 @@
         force a refresh; otherwise it updates every 60s.
       </small>
     </sdpi-item>
+
+    <script>
+      // Show each settings group only for the metrics it applies to, and mirror
+      // the interval slider's value into its row label ("Interval: 12 s").
+      window.addEventListener("load", () => {
+        const select = document.getElementById("metric-select");
+        const groups = {
+          "group-carousel": (m) => m === "carousel",
+          "group-title": (m) => m !== "carousel",
+          "group-subtitle": (m) => m.startsWith("tokens_") || m.startsWith("cost_"),
+          "group-thresholds": (m) => m === "carousel" || m === "session" || m === "weekly",
+        };
+        const applyVisibility = () => {
+          const m = select.value || "session";
+          for (const [id, visible] of Object.entries(groups)) {
+            document.getElementById(id).hidden = !visible(m);
+          }
+        };
+        select.addEventListener("input", applyVisibility); // composed, crosses the shadow DOM
+        select.addEventListener("change", applyVisibility);
+
+        const item = document.getElementById("carousel-interval-item");
+        const range = document.getElementById("carousel-interval-range");
+        const showInterval = () => {
+          const v = range.value != null && range.value !== "" ? range.value : 10;
+          item.setAttribute("label", `Interval: ${v} s`);
+        };
+        range.addEventListener("input", showInterval);
+        range.addEventListener("change", showInterval);
+
+        // Persisted values are applied asynchronously after the PI connects;
+        // poll briefly until they land, then stop.
+        let tries = 0;
+        const t = setInterval(() => {
+          applyVisibility();
+          showInterval();
+          if (++tries >= 20) clearInterval(t);
+        }, 250);
+      });
+    </script>
   </body>
 </html>
