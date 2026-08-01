@@ -17305,7 +17305,7 @@ var streamDeck = {
 };
 var plugin_default = streamDeck;
 
-// ../../Users/felip/AppData/Local/Temp/claude/c--SRVDRU-claude-usage-streamdeck-plugin/6d16892d-4f96-4280-ae6c-4710cb4f82a9/scratchpad/pr-worktree/src/usage-core.ts
+// src/usage-core.ts
 var import_node_fs4 = require("node:fs");
 var import_promises2 = require("node:fs/promises");
 var import_node_child_process = require("node:child_process");
@@ -17734,7 +17734,7 @@ function svgStat(opts) {
 </svg>`;
 }
 
-// ../../Users/felip/AppData/Local/Temp/claude/c--SRVDRU-claude-usage-streamdeck-plugin/6d16892d-4f96-4280-ae6c-4710cb4f82a9/scratchpad/pr-worktree/src/plugin.ts
+// src/plugin.ts
 var ACCENT = "#d97757";
 var LOG_METRICS = /* @__PURE__ */ new Set([
   "tokens_today",
