@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { svgKey, svgStat, color } from "../src/usage-core";
+import { svgKey, svgStat, svgBig, color } from "../src/usage-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "docs", "preview.png");
@@ -20,11 +20,18 @@ const ACCENT = "#d97757"; // Claude coral, used on the stat tiles (mirrors plugi
 const WARN = 50;
 const CRIT = 80; // default gauge thresholds, so colors match the real green→amber→red
 
-// Representative sample values — a marketing banner, not live data. Single row of 7 faces:
-// four live-limit gauges, then three local-log stat tiles, matching the plugin's two metric families.
+// Palettes for the carousel faces — mirrors FACES in plugin.ts (fuchsia 5h / sky weekly).
+const C_SESSION = { accent: "#e879f9", pctCol: "#f0abfc", noteCol: "#f5d0fe" };
+const C_WEEKLY = { accent: "#38bdf8", pctCol: "#7dd3fc", noteCol: "#bae6fd" };
+
+// Representative sample values — a marketing banner, not live data. One row:
+// two live-limit gauges, both carousel faces, then three local-log stat tiles.
 const FACES: string[] = [
 	svgKey({ label: "Session", pct: 33, note: "2h 14m", col: color(33, WARN, CRIT), stale: false }),
 	svgKey({ label: "Weekly", pct: 61, note: "4d 6h", col: color(61, WARN, CRIT), stale: false }),
+	// Carousel: one key, both windows. Below warn it keeps its family tone; past warn the % goes semantic.
+	svgBig({ label: "5 HOURS", pct: 33, note: "2h 14m", col: C_SESSION.pctCol, stale: false, face: 0, faces: 2, accent: C_SESSION.accent, icon: "clock", noteCol: C_SESSION.noteCol }),
+	svgBig({ label: "WEEKLY", pct: 61, note: "4d 6h", col: color(61, WARN, CRIT), stale: false, face: 1, faces: 2, accent: C_WEEKLY.accent, icon: "calendar", noteCol: C_WEEKLY.noteCol }),
 	svgStat({ label: "Tokens", value: "1.2M", sub: "today", accent: ACCENT, stale: false }),
 	svgStat({ label: "Cost", value: "$8.40", sub: "7 days", accent: ACCENT, stale: false }),
 	svgStat({ label: "Tokens", value: "318K", sub: "session", accent: ACCENT, stale: false }),

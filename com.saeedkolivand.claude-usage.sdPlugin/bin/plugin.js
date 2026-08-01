@@ -17305,7 +17305,7 @@ var streamDeck = {
 };
 var plugin_default = streamDeck;
 
-// src/usage-core.ts
+// ../../Users/felip/AppData/Local/Temp/claude/c--SRVDRU-claude-usage-streamdeck-plugin/6d16892d-4f96-4280-ae6c-4710cb4f82a9/scratchpad/pr-worktree/src/usage-core.ts
 var import_node_fs4 = require("node:fs");
 var import_promises2 = require("node:fs/promises");
 var import_node_child_process = require("node:child_process");
@@ -17656,6 +17656,65 @@ function fmtCost(n) {
   if (n >= 10) return "$" + n.toFixed(1);
   return "$" + n.toFixed(2);
 }
+function iconMarkup(icon, x, y, sizePx, stroke) {
+  const s = sizePx / 16;
+  const g = (inner) => `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+  if (icon === "clock") {
+    return g(`<circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/>`);
+  }
+  return g(
+    `<rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/>`
+  );
+}
+function svgBig(opts) {
+  const size = 144;
+  const cx = 72;
+  const accent = opts.accent || "#9ca3af";
+  const pctNum = opts.pct == null ? "--" : `${Math.round(opts.pct)}`;
+  const pctSize = pctNum.length >= 3 ? 42 : 48;
+  const symSize = Math.round(pctSize * 0.5);
+  const pctBaseline = 80;
+  const noteFill = opts.stale ? "#f59e0b" : opts.noteCol || "#e5e7eb";
+  const iconSize = 17;
+  const iconGap = 6;
+  const headerAvail = opts.icon ? 132 - iconSize - iconGap : 132;
+  let labelSize = 22;
+  while (labelSize > 12 && textWidthEm(opts.label) * labelSize * 1.08 > headerAvail) labelSize -= 1;
+  let noteSize = 25;
+  while (noteSize > 13 && textWidthEm(opts.note) * noteSize * 1.08 > 132) noteSize -= 1;
+  let header;
+  if (opts.icon) {
+    const labelWpx = textWidthEm(opts.label) * labelSize;
+    const startX = cx - (labelWpx + iconSize + iconGap) / 2;
+    const iconY = 26 - labelSize * 0.36 - iconSize / 2;
+    header = iconMarkup(opts.icon, startX, iconY, iconSize, accent) + `<text x="${startX + iconSize + iconGap}" y="26" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${accent}">${esc2(opts.label)}</text>`;
+  } else {
+    header = `<text x="${cx}" y="26" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${accent}">${esc2(opts.label)}</text>`;
+  }
+  let dots = "";
+  if (opts.faces && opts.faces > 1) {
+    const gap = 14;
+    const x0 = cx - (opts.faces - 1) * gap / 2;
+    for (let i = 0; i < opts.faces; i++) {
+      dots += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (opts.face ?? 0) ? accent : "#4b5563"}"/>`;
+    }
+  }
+  const barX = 22;
+  const barW = size - 2 * barX;
+  const barY = 92;
+  const barH = 14;
+  const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
+  const fillW = p / 100 * barW;
+  const bar = `<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="${barH / 2}" fill="#2a313d"/>` + (fillW > 0 ? `<rect x="${barX}" y="${barY}" width="${fillW.toFixed(1)}" height="${barH}" rx="${barH / 2}" fill="${opts.col}"/>` : "");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  ${header}
+  <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc2(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${symSize}" font-weight="700">%</tspan>`}</text>
+  ${bar}
+  <text x="${cx}" y="${opts.faces && opts.faces > 1 ? 129 : 131}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${noteFill}">${esc2(opts.note)}</text>
+  ${dots}
+</svg>`;
+}
 function svgStat(opts) {
   const size = 144;
   const cx = 72;
@@ -17675,7 +17734,7 @@ function svgStat(opts) {
 </svg>`;
 }
 
-// src/plugin.ts
+// ../../Users/felip/AppData/Local/Temp/claude/c--SRVDRU-claude-usage-streamdeck-plugin/6d16892d-4f96-4280-ae6c-4710cb4f82a9/scratchpad/pr-worktree/src/plugin.ts
 var ACCENT = "#d97757";
 var LOG_METRICS = /* @__PURE__ */ new Set([
   "tokens_today",
@@ -17686,10 +17745,105 @@ var LOG_METRICS = /* @__PURE__ */ new Set([
   "cost_session"
 ]);
 var visible = /* @__PURE__ */ new Set();
+var FACES = [
+  // Fuchsia vs sky: ~100° of hue apart so the two windows never blur together
+  // on the small LCD (violet vs sky proved too close side by side).
+  { metric: "session", label: "5 HOURS", accent: "#e879f9", pctCol: "#f0abfc", noteCol: "#f5d0fe", icon: "clock" },
+  // fuchsia family
+  { metric: "weekly", label: "WEEKLY", accent: "#38bdf8", pctCol: "#7dd3fc", noteCol: "#bae6fd", icon: "calendar" }
+  // sky family
+];
+function tint(hex, t) {
+  const h = hex.replace("#", "");
+  const ch = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return "#" + ch.map((v) => Math.round(v + (255 - v) * t).toString(16).padStart(2, "0")).join("");
+}
+function facePalette(f, s) {
+  const custom2 = ((f.metric === "session" ? s.colorSession : s.colorWeekly) || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(custom2)) {
+    return { accent: custom2, pctCol: tint(custom2, 0.38), noteCol: tint(custom2, 0.65) };
+  }
+  return { accent: f.accent, pctCol: f.pctCol, noteCol: f.noteCol };
+}
+var carousel = /* @__PURE__ */ new Map();
+function carouselAuto(s) {
+  return String(s.carouselAuto) !== "false";
+}
+function syncCarousel(act, s) {
+  const isCarousel = (s.metric || "session") === "carousel";
+  const st = carousel.get(act.id);
+  if (st?.timer) clearInterval(st.timer);
+  if (!isCarousel) {
+    carousel.delete(act.id);
+    return;
+  }
+  const cur = st ?? { face: 0 };
+  cur.timer = void 0;
+  if (carouselAuto(s)) {
+    const sec = Math.min(3600, Math.max(2, num(s.carouselSec, 10)));
+    cur.timer = setInterval(() => {
+      cur.face = (cur.face + 1) % FACES.length;
+      draw(act, s).catch(() => {
+      });
+    }, sec * 1e3);
+  }
+  carousel.set(act.id, cur);
+}
 async function draw(act, s) {
   const metric = s.metric || "session";
+  if (metric === "carousel") return drawCarousel(act, s);
   if (LOG_METRICS.has(metric)) return drawStat(act, s, metric);
   return drawGauge(act, s, metric);
+}
+async function drawCarousel(act, s) {
+  const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
+  const { data, error: error40, stale } = await fetchUsage(ua, false);
+  const warn = num(s.warn, 50);
+  const crit = num(s.crit, 80);
+  const face = carousel.get(act.id)?.face ?? 0;
+  const f = FACES[face % FACES.length];
+  const override = f.metric === "session" ? s.labelSession : s.labelWeekly;
+  const label = (override || "").trim() || f.label;
+  const pal = facePalette(f, s);
+  if (!data) {
+    const note2 = error40 === "no-token" || error40 === "token-expired" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
+    await act.setImage(
+      toDataUri(
+        svgBig({
+          label,
+          pct: null,
+          note: note2,
+          col: color(null, warn, crit),
+          stale: true,
+          face,
+          faces: FACES.length,
+          accent: pal.accent,
+          icon: f.icon,
+          noteCol: pal.noteCol
+        })
+      )
+    );
+    return;
+  }
+  const { pct, resetsAt } = pickMetric(data, f.metric);
+  const note = pct == null ? "n/a here" : untilText(resetsAt);
+  const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
+  await act.setImage(
+    toDataUri(
+      svgBig({
+        label,
+        pct,
+        note,
+        col,
+        stale: !!stale,
+        face,
+        faces: FACES.length,
+        accent: pal.accent,
+        icon: f.icon,
+        noteCol: pal.noteCol
+      })
+    )
+  );
 }
 async function drawGauge(act, s, metric) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
@@ -17747,8 +17901,9 @@ async function drawStat(act, s, metric) {
     value = fmtCost(stats.sessionCost);
     sub = "session";
   }
+  const subtitle = (s.subtitle || "").trim();
   await act.setImage(
-    toDataUri(svgStat({ label: title || label, value, sub, accent: ACCENT, stale: false }))
+    toDataUri(svgStat({ label: title || label, value, sub: subtitle || sub, accent: ACCENT, stale: false }))
   );
 }
 async function refreshAll(force) {
@@ -17766,15 +17921,29 @@ _UsageMeter_decorators = [action({ UUID: "com.saeedkolivand.claude-usage.meter" 
 var UsageMeter = class extends (_a = SingletonAction) {
   async onWillAppear(ev) {
     visible.add(ev.action);
+    syncCarousel(ev.action, ev.payload.settings);
     await draw(ev.action, ev.payload.settings);
   }
   onWillDisappear(ev) {
     visible.delete(ev.action);
+    const st = carousel.get(ev.action.id);
+    if (st?.timer) clearInterval(st.timer);
+    carousel.delete(ev.action.id);
   }
   async onDidReceiveSettings(ev) {
+    syncCarousel(ev.action, ev.payload.settings);
     await draw(ev.action, ev.payload.settings);
   }
-  async onKeyDown(_ev) {
+  async onKeyDown(ev) {
+    const s = ev.payload.settings;
+    if ((s.metric || "session") === "carousel") {
+      const st = carousel.get(ev.action.id) ?? { face: 0 };
+      st.face = (st.face + 1) % FACES.length;
+      carousel.set(ev.action.id, st);
+      syncCarousel(ev.action, s);
+      await draw(ev.action, s);
+      return;
+    }
     await refreshAll(true);
   }
 };

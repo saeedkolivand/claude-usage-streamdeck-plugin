@@ -6,7 +6,8 @@
  *   docs/marketplace/thumbnail.png   1920 x 960  (2:1)
  *   docs/marketplace/gallery-1.png   1920 x 960  (2:1)  — limits
  *   docs/marketplace/gallery-2.png   1920 x 960  (2:1)  — tokens & cost
- *   docs/marketplace/gallery-3.png   1920 x 960  (2:1)  — full row
+ *   docs/marketplace/gallery-3.png   1920 x 960  (2:1)  — carousel
+ *   docs/marketplace/gallery-4.png   1920 x 960  (2:1)  — full row
  *
  * Maker Console requires a 1:1 icon, a 2:1 thumbnail, and at least 3 gallery
  * images at 2:1. These compose the device-accurate key SVGs onto branded canvases.
@@ -16,7 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { svgKey, svgStat, color } from "../src/usage-core";
+import { svgKey, svgStat, svgBig, color } from "../src/usage-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -39,6 +40,12 @@ const STATS = [
   svgStat({ label: "Tokens", value: "1.2M", sub: "today", accent: ACCENT, stale: false }),
   svgStat({ label: "Cost", value: "$8.40", sub: "7 days", accent: ACCENT, stale: false }),
   svgStat({ label: "Tokens", value: "318K", sub: "session", accent: ACCENT, stale: false }),
+];
+// Carousel: the same key on each of its two faces. Palettes mirror FACES in plugin.ts
+// (fuchsia 5h / sky weekly). Below warn the % keeps its family tone; past warn it goes semantic.
+const CAROUSEL = [
+  svgBig({ label: "5 HOURS", pct: 33, note: "2h 14m", col: "#f0abfc", stale: false, face: 0, faces: 2, accent: "#e879f9", icon: "clock", noteCol: "#f5d0fe" }),
+  svgBig({ label: "WEEKLY", pct: 61, note: "4d 6h", col: color(61, WARN, CRIT), stale: false, face: 1, faces: 2, accent: "#38bdf8", icon: "calendar", noteCol: "#bae6fd" }),
 ];
 
 /** Strip the key SVG's outer wrapper and place its body at (x,y), scaled. */
@@ -93,7 +100,7 @@ await render(
   [
     text(W / 2, 250, "AI Coding Usage Meter", 78, 800, "#ffffff"),
     text(W / 2, 312, "Live limits, tokens &amp; cost — right on your Stream Deck", 32, 400, MUTED),
-    row([...GAUGES, ...STATS], 184, 26, 430, W),
+    row([...GAUGES, ...CAROUSEL, ...STATS], 168, 24, 430, W),
     text(W / 2, 800, "Windows &amp; macOS   ·   Free &amp; open source   ·   Works with Claude Code", 26, 600, MUTED, 0.5),
   ].join("\n")
 );
@@ -124,15 +131,28 @@ await render(
   ].join("\n")
 );
 
-// Gallery 3 — full row.
+// Gallery 3 — carousel.
 await render(
   "gallery-3.png",
   W,
   H,
   [
+    text(W / 2, 175, "CAROUSEL", 26, 700, ACCENT, 3),
+    text(W / 2, 248, "One key, both windows", 60, 800, "#ffffff"),
+    row(CAROUSEL, 300, 56, 380, W),
+    text(W / 2, 800, "Auto-rotates on your interval · press to flip · one key freed up", 28, 400, MUTED),
+  ].join("\n")
+);
+
+// Gallery 4 — full row.
+await render(
+  "gallery-4.png",
+  W,
+  H,
+  [
     text(W / 2, 175, "ONE ACTION", 26, 700, ACCENT, 3),
     text(W / 2, 248, "As many keys as you like", 60, 800, "#ffffff"),
-    row([...GAUGES, ...STATS], 184, 26, 410, W),
+    row([...GAUGES, ...CAROUSEL, ...STATS], 168, 24, 410, W),
     text(W / 2, 800, "All keys share one cached request · tap any key to refresh", 28, 400, MUTED),
   ].join("\n")
 );
