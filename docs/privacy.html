@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — AI Coding Usage Meter</title>
+    <meta
+      name="description"
+      content="AI Coding Usage Meter runs entirely on your own computer. No servers, no analytics, no telemetry, no third-party tracking."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon@2x.png" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Privacy Policy — AI Coding Usage Meter" />
+    <meta
+      property="og:description"
+      content="No servers, no analytics, no telemetry. One request, to Anthropic only."
+    />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="./">
+          <img src="icon.png" alt="" width="22" height="22" />
+          AI Coding Usage Meter
+        </a>
+        <span class="nav__spacer"></span>
+        <a class="nav__link nav__link--hide-sm" href="setup.html">Setup guide</a>
+        <a class="nav__link nav__link--hide-sm" href="privacy.html">Privacy</a>
+        <a
+          class="nav__link"
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+          >GitHub</a
+        >
+      </div>
+    </header>
+
+    <main class="doc">
+      <h1>Privacy Policy</h1>
+      <p class="doc__meta">
+        Last updated 11 June 2026 · Maker: Saeed Kolivand ·
+        <a
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/issues"
+          >Contact</a
+        >
+      </p>
+
+      <h2>Summary</h2>
+      <p>
+        This plugin runs entirely on your own computer. It reads data that
+        already exists on your machine to display usage figures on your Stream
+        Deck keys. It has <strong>no servers, no analytics, no telemetry, and
+        no third-party tracking</strong>. The only network request it ever makes
+        goes directly to Anthropic's own usage endpoint, using your own
+        credentials, to fetch your own usage. Nothing is sent anywhere else.
+      </p>
+
+      <h2>What the plugin accesses, locally on your device</h2>
+      <ul>
+        <li>
+          <strong>Your Claude credential token.</strong> To read your live usage
+          limits, the plugin reads the access token that Claude Code already
+          stores on your machine:
+          <ul>
+            <li>
+              <strong>Windows:</strong>
+              <code>%USERPROFILE%\.claude\.credentials.json</code>
+            </li>
+            <li>
+              <strong>macOS:</strong> the login Keychain item
+              <code>Claude Code-credentials</code>
+            </li>
+            <li>
+              <strong>Linux (source build only):</strong>
+              <code>~/.claude/.credentials.json</code>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <strong>Your local Claude Code transcripts.</strong> For the Tokens and
+          Cost metrics, the plugin reads the local JSONL conversation logs under
+          <code>~/.claude/projects/</code> to total token counts and cost
+          figures. It parses these files read-only.
+        </li>
+        <li>
+          <strong>Your key settings.</strong> The metric, thresholds, and
+          optional User-Agent you choose are stored by the Stream Deck
+          application in its own local plugin settings.
+        </li>
+      </ul>
+
+      <h2>What the plugin transmits</h2>
+      <ul>
+        <li>
+          <strong>One request, to Anthropic only.</strong> The plugin sends your
+          access token in an <code>Authorization: Bearer</code> header to
+          Anthropic's usage endpoint
+          (<code>https://api.anthropic.com/api/oauth/usage</code>) to retrieve
+          your session and weekly usage percentages. This is the same endpoint
+          Claude Code's own <code>/usage</code> command uses. The request is made
+          directly from your machine to Anthropic; it does not pass through any
+          server operated by the plugin or its maker.
+        </li>
+        <li>
+          <strong>Nothing else leaves your device.</strong> Token counts, cost
+          figures, and the contents of your transcripts are computed locally and
+          displayed on your keys only. They are never uploaded or transmitted
+          anywhere.
+        </li>
+      </ul>
+
+      <h2>What the plugin stores</h2>
+      <ul>
+        <li>
+          The plugin does <strong>not</strong> store, copy, cache, or retain your
+          credential token. It reads the token from its existing on-device
+          location at request time and uses it only for the request above.
+        </li>
+        <li>
+          The plugin does <strong>not</strong> store the contents of your
+          transcripts. It reads them, computes totals, and discards the parsed
+          data.
+        </li>
+        <li>
+          Only your chosen display preferences (metric, thresholds, User-Agent)
+          are persisted, and only within Stream Deck's own local settings on your
+          computer.
+        </li>
+      </ul>
+
+      <h2>Data sharing</h2>
+      <p>
+        The plugin shares <strong>no data</strong> with the maker or any third
+        party. There is no account, no sign-in to any service operated by the
+        plugin, and no collection of personal information. Your interaction with
+        Anthropic's endpoint is governed by
+        <a href="https://www.anthropic.com/legal/privacy"
+          >Anthropic's own privacy policy and terms</a
+        >.
+      </p>
+
+      <h2>Third-party note</h2>
+      <p>
+        This plugin is an independent, unofficial tool. It is not affiliated
+        with, endorsed by, or sponsored by Anthropic. "Claude" and "Claude Code"
+        are trademarks of Anthropic and are used here only to describe
+        compatibility. The Anthropic usage endpoint it queries is undocumented;
+        if Anthropic changes or removes it, the affected keys simply show
+        <code>offline</code> or <code>--</code> and no data is lost.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        The plugin is a developer productivity tool and is not directed to
+        children under 13.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        If this policy changes, the updated version will be published here and in
+        the repository with a new "Last updated" date.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions or concerns:
+        <a
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/issues"
+          >open an issue on GitHub</a
+        >.
+      </p>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <nav class="footer__links">
+          <a href="./">Home</a>
+          <a href="setup.html">Setup guide</a>
+          <a
+            href="https://marketplace.elgato.com/product/ai-coding-usage-meter-f4aa1012-a57b-4a02-9b90-a37004678ee7"
+            >Elgato Marketplace</a
+          >
+          <a href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+            >GitHub repository</a
+          >
+          <a
+            href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/issues"
+            >Support</a
+          >
+        </nav>
+        <div class="footer__fine">
+          <p>© 2026 Saeed Kolivand · Released under the MIT License.</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

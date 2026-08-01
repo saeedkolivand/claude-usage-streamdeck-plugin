@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Setup Guide — AI Coding Usage Meter</title>
+    <meta
+      name="description"
+      content="Install AI Coding Usage Meter on your Stream Deck, place a key, and pick a metric. Requirements, every setting explained, and fixes for the common issues."
+    />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" href="icon.png" />
+    <link rel="apple-touch-icon" href="icon@2x.png" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Setup Guide — AI Coding Usage Meter" />
+    <meta
+      property="og:description"
+      content="Install, place a key, pick a metric. Every setting explained, plus fixes for the common issues."
+    />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <header class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="./">
+          <img src="icon.png" alt="" width="22" height="22" />
+          AI Coding Usage Meter
+        </a>
+        <span class="nav__spacer"></span>
+        <a class="nav__link nav__link--hide-sm" href="setup.html">Setup guide</a>
+        <a class="nav__link nav__link--hide-sm" href="privacy.html">Privacy</a>
+        <a
+          class="nav__link"
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+          >GitHub</a
+        >
+      </div>
+    </header>
+
+    <main class="doc">
+      <h1>Setup guide</h1>
+      <p class="doc__meta">
+        Install, place a key, pick a metric. Two minutes, start to finish.
+      </p>
+
+      <h2>Before you start</h2>
+      <ul>
+        <li>
+          The official
+          <a href="https://www.elgato.com/downloads">Stream Deck app</a>,
+          version <strong>6.9 or newer</strong>. It ships the Node runtime the
+          plugin uses, so you don't need to install Node.js separately.
+        </li>
+        <li><strong>Windows 10+</strong> or <strong>macOS 12+</strong>.</li>
+        <li>
+          <strong>Sign in to Claude Code at least once</strong> on this machine,
+          so the credential token exists for the plugin to read.
+        </li>
+      </ul>
+      <p>
+        Both Pro and Max plans work. Any metric your plan doesn't report shows
+        <code>--</code> rather than failing.
+      </p>
+      <div class="doc__note">
+        <p>
+          <strong>Linux:</strong> there's no official Stream Deck app for Linux,
+          so the plugin can't be installed there. The data layer is plain Node
+          and does run on Linux if you're building from source.
+        </p>
+      </div>
+
+      <h2>Install</h2>
+      <p>
+        The easy path: open the
+        <a
+          href="https://marketplace.elgato.com/product/ai-coding-usage-meter-f4aa1012-a57b-4a02-9b90-a37004678ee7"
+          >Elgato Marketplace listing</a
+        >
+        and click <strong>Get</strong>. It installs straight into the Stream Deck
+        app and updates itself from then on.
+      </p>
+      <p>To install the packaged file by hand instead:</p>
+      <ol>
+        <li>
+          Download <code>com.saeedkolivand.claude-usage.streamDeckPlugin</code>
+          from the
+          <a
+            href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/releases/latest"
+            >latest release</a
+          >.
+        </li>
+        <li>Double-click it, then choose <strong>Install</strong>.</li>
+      </ol>
+
+      <h2>Place a key</h2>
+      <ol>
+        <li>
+          In Stream Deck, find the <strong>AI Coding Usage Meter</strong>
+          category in the actions list on the right.
+        </li>
+        <li>Drag <strong>Usage Meter</strong> onto any key.</li>
+        <li>
+          Select that key and pick a <strong>Metric</strong> in the property
+          inspector below the canvas.
+        </li>
+        <li>Repeat on more keys for the other metrics.</li>
+      </ol>
+      <p>Keys populate within a second or two of being placed.</p>
+
+      <h2>Settings</h2>
+      <h3>Metric</h3>
+      <p>
+        Which value the key shows: <strong>Carousel</strong>,
+        <strong>Session</strong> or <strong>Weekly</strong> for live limits, or
+        <strong>Tokens</strong> / <strong>Cost</strong> for today, the last 7
+        days, or your current session.
+      </p>
+
+      <h3>Auto-rotate and Interval (Carousel only)</h3>
+      <p>
+        Whether the carousel flips between its 5-hour and weekly faces on its
+        own, and how many seconds between flips (default <code>10</code>).
+        Pressing the key always flips it immediately, whether or not auto-rotate
+        is on.
+      </p>
+
+      <h3>5h and Weekly label and color (Carousel only)</h3>
+      <p>
+        Per-face label (defaults <code>5 HOURS</code> and <code>WEEKLY</code>,
+        localize freely) and base color. The percentage, bar, and countdown tints
+        are derived from the base color you pick.
+      </p>
+
+      <h3>Subtitle (Tokens and Cost only)</h3>
+      <p>
+        Overrides the scope line under the value (<code>today</code>,
+        <code>7 days</code>, <code>session</code>). Handy for localization.
+      </p>
+
+      <h3>Amber and Red thresholds</h3>
+      <p>
+        The percentages where a live limit metric turns amber (default
+        <code>50</code>) and red (default <code>80</code>).
+      </p>
+
+      <h3>User-Agent (Advanced)</h3>
+      <p>
+        Sent to the usage endpoint. It must start with <code>claude-code/</code>
+        (default <code>claude-code/2.0.31</code>). Bump it if Anthropic ever
+        tightens the check.
+      </p>
+
+      <h2>If something looks wrong</h2>
+      <h3>The key says "open Claude"</h3>
+      <p>
+        The token has expired or can't be read. Launch Claude Code once, which
+        refreshes it, and the keys recover on the next tick. On macOS you may
+        also be getting a Keychain prompt in the background, approve it.
+      </p>
+
+      <h3>The key says "offline"</h3>
+      <p>
+        The usage endpoint couldn't be reached. Keys keep the last good value, so
+        nothing is lost, and they recover on their own when the connection comes
+        back.
+      </p>
+
+      <h3>A metric shows <code>--</code></h3>
+      <p>
+        Your plan doesn't report that particular figure. This is expected, not an
+        error.
+      </p>
+
+      <h3>Tokens and cost look low</h3>
+      <p>
+        These are parsed from Claude Code's local logs, which currently
+        under-record input and output tokens, so totals lean low and cost is a
+        lower bound. On Pro and Max you don't pay per token anyway, so the cost
+        shown is notional equivalent API spend, useful for relative sense rather
+        than as a real charge.
+      </p>
+
+      <h2>Good to know</h2>
+      <ul>
+        <li>
+          <strong>Adding keys doesn't add API calls.</strong> All your keys share
+          a single cached fetch per minute.
+        </li>
+        <li>
+          <strong>Tap any key to refresh</strong> immediately instead of waiting
+          for the next 60-second tick.
+        </li>
+        <li>
+          <strong>The usage endpoint is undocumented.</strong> If Anthropic
+          changes or removes it, keys show <code>offline</code> or
+          <code>--</code> and keep their last value. Nothing breaks.
+        </li>
+      </ul>
+
+      <h2>Still stuck?</h2>
+      <p>
+        The
+        <a href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+          >README</a
+        >
+        covers building from source and has a command for testing the usage
+        endpoint directly. If that doesn't get you there,
+        <a
+          href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/issues"
+          >open an issue</a
+        >.
+      </p>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <nav class="footer__links">
+          <a href="./">Home</a>
+          <a href="privacy.html">Privacy policy</a>
+          <a
+            href="https://marketplace.elgato.com/product/ai-coding-usage-meter-f4aa1012-a57b-4a02-9b90-a37004678ee7"
+            >Elgato Marketplace</a
+          >
+          <a href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin"
+            >GitHub repository</a
+          >
+          <a
+            href="https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/issues"
+            >Support</a
+          >
+        </nav>
+        <div class="footer__fine">
+          <p>© 2026 Saeed Kolivand · Released under the MIT License.</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

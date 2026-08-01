@@ -503,3 +503,75 @@ h3 {
     display: none;
   }
 }
+
+/* ---------- Document pages (privacy, setup) ---------- */
+.doc {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 72px 22px 96px;
+}
+
+.doc h1 {
+  font-size: 44px;
+  margin: 0 0 12px;
+}
+
+.doc__meta {
+  color: var(--ink-muted-48);
+  font-size: 15px;
+  margin: 0 0 48px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.doc h2 {
+  font-size: 24px;
+  margin: 48px 0 14px;
+}
+
+.doc h3 {
+  font-size: 18px;
+  margin: 32px 0 10px;
+}
+
+.doc p,
+.doc li {
+  color: var(--ink-muted-80);
+}
+
+.doc ul,
+.doc ol {
+  padding-left: 22px;
+}
+
+.doc li {
+  margin-bottom: 10px;
+}
+
+.doc code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+  background: var(--parchment);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+.doc__note {
+  background: var(--parchment);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 32px 0;
+}
+
+.doc__note p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .doc {
+    padding: 48px 22px 64px;
+  }
+  .doc h1 {
+    font-size: 34px;
+  }
+}
