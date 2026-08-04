@@ -93,6 +93,15 @@
           figures. It parses these files read-only.
         </li>
         <li>
+          <strong>Which config folders exist.</strong> To offer a profile per key,
+          the plugin lists <code>~/.claude</code> and folders beside it whose
+          names begin with <code>.claude</code>, treating any that contains a
+          <code>projects</code> directory as an account. For each it reads the
+          account's email, organization and plan tier from that folder's
+          <code>.claude.json</code>, purely to label the dropdown. Nothing about
+          this is transmitted.
+        </li>
+        <li>
           <strong>Your key settings.</strong> The metric, thresholds, and
           optional User-Agent you choose are stored by the Stream Deck
           application in its own local plugin settings.

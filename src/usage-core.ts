@@ -1,9 +1,9 @@
 // usage-core.ts — data + rendering logic, no Stream Deck SDK dependency.
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 export const ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 export const DEFAULT_UA = "claude-code/2.0.31";
@@ -18,9 +18,20 @@ export type UsageData = {
 
 export type FetchResult = { data: UsageData | null; error?: string; stale?: boolean };
 
-// Module-level cache shared across all key instances in the plugin process,
-// so 3-4 keys produce a single network call per minute, not 3-4.
-let cache: { at: number; data: UsageData | null } = { at: 0, data: null };
+// Cache shared across key instances so 3-4 keys produce a single network call
+// per minute, not 3-4 — but keyed by profile. A single slot would let a key
+// pointing at the work account serve its numbers to a key pointing at the
+// personal one, silently, for the rest of the cache window.
+type ApiCache = { at: number; data: UsageData | null };
+const caches = new Map<string, ApiCache>();
+function cacheFor(key: string): ApiCache {
+  let entry = caches.get(key);
+  if (!entry) {
+    entry = { at: 0, data: null };
+    caches.set(key, entry);
+  }
+  return entry;
+}
 
 // How old the cached data may get before a failing refresh is surfaced as
 // stale. A single failed poll out of the 60s cadence self-heals within a
@@ -35,10 +46,11 @@ const STALE_AFTER_MS = 3 * 60_000;
 // leaves cache.at untouched, so every visible key's redraw fires its own
 // retry — exactly when the API is asking for less (rate limits, outages).
 // A manual key tap passes force=true and still retries immediately.
-let lastFail: { at: number; error: string } | null = null;
+const failures = new Map<string, { at: number; error: string }>();
 
-function failResult(error: string): FetchResult {
-  lastFail = { at: Date.now(), error };
+function failResult(key: string, error: string): FetchResult {
+  failures.set(key, { at: Date.now(), error });
+  const cache = cacheFor(key);
   return {
     data: cache.data,
     error,
@@ -46,21 +58,136 @@ function failResult(error: string): FetchResult {
   };
 }
 
-export function credentialsPath(): string {
-  // Windows: %USERPROFILE%\.claude\.credentials.json  (homedir() resolves USERPROFILE)
-  // Linux:   ~/.claude/.credentials.json
-  // macOS:   stored in Keychain instead (file fallback handled by caller if present)
-  return join(homedir(), ".claude", ".credentials.json");
+/// One Claude Code config directory, i.e. one logged-in account.
+export type Profile = {
+  configDir: string;
+  isDefault: boolean;
+  email?: string;
+  organization?: string;
+  plan?: string;
+  displayName: string;
+};
+
+export function defaultConfigDir(home = homedir()): string {
+  return join(home, ".claude");
 }
 
-export function readToken(): { token?: string; expired?: boolean } {
-  // macOS keeps the OAuth token in the login Keychain, not on disk.
-  if (process.platform === "darwin") {
-    const fromKeychain = readTokenFromKeychain();
-    if (fromKeychain.token) return fromKeychain;
-    // fall through to the file in case this machine also has one
+/** Transcripts are the only thing that makes a directory worth reading.
+ *  Deliberately not requiring .credentials.json: it can be relocated by
+ *  CLAUDE_SECURESTORAGE_CONFIG_DIR, or live in the macOS Keychain or Windows
+ *  Credential Manager with no file at all. */
+export function isProfileDir(dir: string): boolean {
+  try {
+    return statSync(join(dir, "projects")).isDirectory();
+  } catch {
+    return false;
   }
-  return readTokenFromFile();
+}
+
+/** Where the account identity lives, which depends on the profile.
+ *
+ *  A relocated profile keeps its global config *inside* the config dir; the
+ *  default keeps it as a *sibling* — ~/.claude.json, not ~/.claude/.claude.json.
+ *  The sibling branch is gated to the default on purpose: ~/.claude-work's
+ *  parent is also ~, so applying it everywhere would stamp the default
+ *  account's email onto every relocated profile. */
+export function globalConfigPath(dir: string, isDefault: boolean): string | null {
+  const candidates = [join(dir, ".config.json"), join(dir, ".claude.json")];
+  if (isDefault) candidates.push(join(dirname(dir), ".claude.json"));
+  return candidates.find((p) => existsSync(p)) ?? null;
+}
+
+/** "default_claude_max_20x" -> "Max". Unrecognized stays undefined rather than
+ *  putting a raw internal tier string in front of the user. */
+export function planLabel(tier?: string): string | undefined {
+  const t = (tier || "").toLowerCase();
+  for (const name of ["enterprise", "team", "max", "pro", "free"]) {
+    if (t.includes(name)) return name[0].toUpperCase() + name.slice(1);
+  }
+  return undefined;
+}
+
+function describeProfile(dir: string, isDefault: boolean): Profile {
+  const p: Profile = {
+    configDir: dir,
+    isDefault,
+    displayName: isDefault ? "Default" : (dir.split(/[\\/]/).pop() || dir),
+  };
+  const configPath = globalConfigPath(dir, isDefault);
+  if (configPath) {
+    try {
+      const account = JSON.parse(readFileSync(configPath, "utf8"))?.oauthAccount || {};
+      p.email = account.emailAddress || undefined;
+      p.organization = account.organizationName || undefined;
+      p.plan = planLabel(account.organizationRateLimitTier);
+    } catch {
+      /* a profile with no readable global config still has usable transcripts */
+    }
+  }
+  if (p.email) p.displayName = `${p.displayName} — ${p.email}`;
+  return p;
+}
+
+/** Every profile on this machine, default first. CLAUDE_CONFIG_DIR is honored
+ *  when set, though the plugin runs as a child of the Stream Deck app and so
+ *  rarely inherits a shell environment. */
+export function discoverProfiles(extra: string[] = [], home = homedir()): Profile[] {
+  const defaultDir = defaultConfigDir(home);
+  const candidates: string[] = [];
+
+  if (process.env.CLAUDE_CONFIG_DIR) candidates.push(process.env.CLAUDE_CONFIG_DIR);
+  candidates.push(defaultDir);
+  try {
+    for (const name of readdirSync(home)) {
+      if (name.startsWith(".claude")) candidates.push(join(home, name));
+    }
+  } catch {
+    /* unreadable home: the default candidate still gets its chance */
+  }
+  candidates.push(...extra);
+
+  const seen = new Set<string>();
+  const out: Profile[] = [];
+  for (const candidate of candidates) {
+    const dir = resolve(candidate);
+    if (seen.has(dir) || !isProfileDir(dir)) continue;
+    seen.add(dir);
+    out.push(describeProfile(dir, dir === resolve(defaultDir)));
+  }
+  return out.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+}
+
+/** The profile a key is configured for, falling back to the default when its
+ *  directory has since gone away. */
+export function resolveProfile(configDir?: string, extra: string[] = []): Profile | null {
+  const all = discoverProfiles(extra);
+  if (configDir) {
+    const match = all.find((p) => resolve(p.configDir) === resolve(configDir));
+    if (match) return match;
+  }
+  return all[0] ?? null;
+}
+
+export function credentialsPath(configDir = defaultConfigDir()): string {
+  return join(configDir, ".credentials.json");
+}
+
+/** File first, Keychain second — and the Keychain **only for the default
+ *  profile**.
+ *
+ *  There is exactly one Keychain item, "Claude Code-credentials", with no
+ *  per-profile variant. Falling back to it for a relocated profile would show
+ *  another account's limit percentages under that profile's name: wrong, and
+ *  invisibly so. */
+export function readToken(profile?: Profile): { token?: string; expired?: boolean } {
+  const dir = profile?.configDir ?? defaultConfigDir();
+  const isDefault = profile ? profile.isDefault : true;
+
+  const fromFile = readTokenFromFile(credentialsPath(dir));
+  if (fromFile.token) return fromFile;
+
+  if (process.platform === "darwin" && isDefault) return readTokenFromKeychain();
+  return {};
 }
 
 function parseCred(raw: string): { token?: string; expired?: boolean } {
@@ -72,9 +199,9 @@ function parseCred(raw: string): { token?: string; expired?: boolean } {
   return { token, expired };
 }
 
-function readTokenFromFile(): { token?: string; expired?: boolean } {
+function readTokenFromFile(path: string): { token?: string; expired?: boolean } {
   try {
-    return parseCred(readFileSync(credentialsPath(), "utf8"));
+    return parseCred(readFileSync(path, "utf8"));
   } catch {
     return {};
   }
@@ -93,8 +220,16 @@ function readTokenFromKeychain(): { token?: string; expired?: boolean } {
   }
 }
 
-export async function fetchUsage(ua: string, force = false): Promise<FetchResult> {
+export async function fetchUsage(
+  ua: string,
+  force = false,
+  profile?: Profile,
+): Promise<FetchResult> {
   const now = Date.now();
+  const key = profile?.configDir ?? defaultConfigDir();
+  const cache = cacheFor(key);
+  const lastFail = failures.get(key);
+
   if (!force && cache.data && now - cache.at < CACHE_TTL_MS) {
     return { data: cache.data };
   }
@@ -106,11 +241,11 @@ export async function fetchUsage(ua: string, force = false): Promise<FetchResult
       stale: cache.data != null && now - cache.at > STALE_AFTER_MS,
     };
   }
-  const { token, expired } = readToken();
-  if (!token) return failResult("no-token");
+  const { token, expired } = readToken(profile);
+  if (!token) return failResult(key, "no-token");
   // A token the credentials already mark as expired guarantees a 401 — skip
   // the request and wait for Claude Code to write a refreshed one.
-  if (expired) return failResult("token-expired");
+  if (expired) return failResult(key, "token-expired");
 
   try {
     const res = await fetch(ENDPOINT, {
@@ -125,13 +260,14 @@ export async function fetchUsage(ua: string, force = false): Promise<FetchResult
         Accept: "application/json, text/plain, */*",
       },
     });
-    if (!res.ok) return failResult(`http-${res.status}`);
+    if (!res.ok) return failResult(key, `http-${res.status}`);
     const data = (await res.json()) as UsageData;
-    cache = { at: now, data };
-    lastFail = null;
+    cache.at = now;
+    cache.data = data;
+    failures.delete(key);
     return { data };
   } catch {
-    return failResult("network");
+    return failResult(key, "network");
   }
 }
 
@@ -357,11 +493,12 @@ export function computeCost(u: Record<string, unknown>, model: string): number {
   );
 }
 
-export function projectsDir(base?: string): string {
-  return join(base || homedir(), ".claude", "projects");
+export function projectsDir(configDir = defaultConfigDir()): string {
+  return join(configDir, "projects");
 }
 
-let logCache: { at: number; data: LogStats } | null = null;
+// Keyed by config dir for the same reason the API cache is.
+const logCaches = new Map<string, { at: number; data: LogStats }>();
 const LOG_TTL_MS = 30_000;
 
 async function listJsonl(dir: string): Promise<{ path: string; mtime: number }[]> {
@@ -388,9 +525,11 @@ async function listJsonl(dir: string): Promise<{ path: string; mtime: number }[]
   return res;
 }
 
-export async function getLogStats(force = false, baseDir?: string): Promise<LogStats> {
+export async function getLogStats(force = false, configDir?: string): Promise<LogStats> {
   const now = Date.now();
-  if (!force && !baseDir && logCache && now - logCache.at < LOG_TTL_MS) {
+  const key = configDir ?? defaultConfigDir();
+  const logCache = logCaches.get(key);
+  if (!force && logCache && now - logCache.at < LOG_TTL_MS) {
     return logCache.data;
   }
 
@@ -404,17 +543,17 @@ export async function getLogStats(force = false, baseDir?: string): Promise<LogS
     ok: true,
   };
 
-  const files = await listJsonl(projectsDir(baseDir));
+  const files = await listJsonl(projectsDir(key));
   if (files.length === 0) {
     // Could be "no logs yet" or "dir missing"; treat missing dir as not-ok.
     let dirExists = true;
     try {
-      await stat(projectsDir(baseDir));
+      await stat(projectsDir(key));
     } catch {
       dirExists = false;
     }
     out.ok = dirExists;
-    if (!baseDir) logCache = { at: now, data: out };
+    logCaches.set(key, { at: now, data: out });
     return out;
   }
 
@@ -491,7 +630,7 @@ export async function getLogStats(force = false, baseDir?: string): Promise<LogS
     }
   }
 
-  if (!baseDir) logCache = { at: now, data: out };
+  logCaches.set(key, { at: now, data: out });
   return out;
 }
 

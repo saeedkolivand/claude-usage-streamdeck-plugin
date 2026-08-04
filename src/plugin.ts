@@ -10,6 +10,9 @@ import streamDeck, {
 
 import {
   DEFAULT_UA,
+  discoverProfiles,
+  resolveProfile,
+  type Profile,
   fetchUsage,
   pickMetric,
   untilText,
@@ -26,6 +29,8 @@ import {
 
 type Settings = {
   metric?: string;
+  profile?: string; // config dir of the Claude account this key reads; empty = default
+  profilePath?: string; // a config dir discovery wouldn't find on its own
   warn?: number;
   crit?: number;
   userAgent?: string;
@@ -120,6 +125,13 @@ function syncCarousel(act: any, s: Settings): void {
   carousel.set(act.id, cur);
 }
 
+/** Which Claude account this key reads. Settings are per action instance, so
+ *  one key can show work and the next personal. */
+function profileFor(s: Settings): Profile | null {
+  const extra = (s.profilePath || "").trim();
+  return resolveProfile(s.profile, extra ? [extra] : []);
+}
+
 async function draw(act: any, s: Settings): Promise<void> {
   const metric = s.metric || "session";
   if (metric === "carousel") return drawCarousel(act, s);
@@ -129,7 +141,7 @@ async function draw(act: any, s: Settings): Promise<void> {
 
 async function drawCarousel(act: any, s: Settings): Promise<void> {
   const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
-  const { data, error, stale } = await fetchUsage(ua, false); // honors the shared cache
+  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s)); // per-profile cache
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const face = carousel.get(act.id)?.face ?? 0;
@@ -173,7 +185,7 @@ async function drawCarousel(act: any, s: Settings): Promise<void> {
 
 async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
-  const { data, error, stale } = await fetchUsage(ua, false); // honors the shared cache
+  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s)); // per-profile cache
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const title = (s.title || "").trim(); // custom label; empty = use the metric default
@@ -201,7 +213,7 @@ async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
 }
 
 async function drawStat(act: any, s: Settings, metric: string): Promise<void> {
-  const stats = await getLogStats(false); // honors its own 30s cache
+  const stats = await getLogStats(false, profileFor(s)?.configDir); // per-profile 30s cache
   const title = (s.title || "").trim(); // custom label; empty = use the metric default
   if (!stats.ok) {
     await act.setImage(
@@ -233,11 +245,32 @@ async function drawStat(act: any, s: Settings, metric: string): Promise<void> {
 }
 
 async function refreshAll(force: boolean): Promise<void> {
-  // Refresh both data sources once, then repaint every visible key from cache.
-  await Promise.allSettled([fetchUsage(DEFAULT_UA, force), getLogStats(force)]);
+  // Refresh each data source once per *distinct profile* in play, then repaint
+  // every visible key from cache. Four keys on one account still make one call;
+  // two accounts make two.
+  const pending: [any, Settings][] = [];
+  const profiles = new Map<string, Profile | null>();
+
   for (const act of visible) {
     try {
       const s = (await act.getSettings()) as Settings;
+      pending.push([act, s]);
+      const p = profileFor(s);
+      profiles.set(p?.configDir ?? "", p);
+    } catch {
+      /* ignore a single bad key */
+    }
+  }
+
+  await Promise.allSettled(
+    [...profiles.values()].flatMap((p) => [
+      fetchUsage(DEFAULT_UA, force, p ?? undefined),
+      getLogStats(force, p?.configDir),
+    ]),
+  );
+
+  for (const [act, s] of pending) {
+    try {
       await draw(act, s);
     } catch {
       /* ignore a single bad key */
@@ -263,6 +296,22 @@ class UsageMeter extends SingletonAction<Settings> {
   override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<Settings>): Promise<void> {
     syncCarousel(ev.action, ev.payload.settings);
     await draw(ev.action, ev.payload.settings);
+  }
+
+  /** The property inspector is a sandboxed webview with no filesystem access,
+   *  so the profile dropdown can't enumerate config dirs itself. sdpi-components
+   *  asks for its options over this channel (`datasource="profiles"`). */
+  override onSendToPlugin(ev: any): void {
+    if (ev?.payload?.event !== "profiles") return;
+    const items = discoverProfiles().map((p) => ({
+      label: p.plan ? `${p.displayName} (${p.plan})` : p.displayName,
+      value: p.configDir,
+    }));
+    streamDeck.ui.current?.sendToPropertyInspector({
+      event: "profiles",
+      // An empty list would leave the dropdown blank with no explanation.
+      items: items.length ? items : [{ label: "No Claude data found", value: "" }],
+    });
   }
 
   override async onKeyDown(ev: KeyDownEvent<Settings>): Promise<void> {

@@ -4395,13 +4395,13 @@ var Lazy = class {
 
 // node_modules/@elgato/utils/dist/promises.js
 function withResolvers() {
-  let resolve;
+  let resolve2;
   let reject;
   const promise2 = new Promise((res, rej) => {
-    resolve = res;
+    resolve2 = res;
     reject = rej;
   });
-  return { promise: promise2, resolve, reject };
+  return { promise: promise2, resolve: resolve2, reject };
 }
 
 // node_modules/zod/v4/mini/external.js
@@ -16129,8 +16129,8 @@ var settings = {
    * @returns Promise containing the plugin's global settings.
    */
   getGlobalSettings: () => {
-    return new Promise((resolve) => {
-      connection.once("didReceiveGlobalSettings", (ev) => resolve(ev.payload.settings));
+    return new Promise((resolve2) => {
+      connection.once("didReceiveGlobalSettings", (ev) => resolve2(ev.payload.settings));
       connection.send({
         event: "getGlobalSettings",
         context: connection.registrationParameters.pluginUUID,
@@ -16531,7 +16531,7 @@ var Action = class extends ActionContext {
    * @returns The payload from the received event.
    */
   async #fetch(command, event) {
-    const { resolve, reject, promise: promise2 } = withResolvers();
+    const { resolve: resolve2, reject, promise: promise2 } = withResolvers();
     const timeoutId = setTimeout(() => {
       listener.dispose();
       reject("The request timed out");
@@ -16540,7 +16540,7 @@ var Action = class extends ActionContext {
       if (ev.context == this.id) {
         clearTimeout(timeoutId);
         listener.dispose();
-        resolve(ev);
+        resolve2(ev);
       }
     });
     await connection.send({
@@ -17192,8 +17192,8 @@ function openUrl(url2) {
 function getSecrets() {
   requiresVersion(6.9, connection.version, "Secrets");
   requiresSDKVersion(3, "Secrets");
-  return new Promise((resolve) => {
-    connection.once("didReceiveSecrets", (ev) => resolve(ev.payload.secrets));
+  return new Promise((resolve2) => {
+    connection.once("didReceiveSecrets", (ev) => resolve2(ev.payload.secrets));
     connection.send({
       event: "getSecrets",
       context: connection.registrationParameters.pluginUUID
@@ -17314,26 +17314,107 @@ var import_node_path6 = require("node:path");
 var ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 var DEFAULT_UA = "claude-code/2.0.31";
 var CACHE_TTL_MS = 55e3;
-var cache = { at: 0, data: null };
+var caches = /* @__PURE__ */ new Map();
+function cacheFor(key) {
+  let entry = caches.get(key);
+  if (!entry) {
+    entry = { at: 0, data: null };
+    caches.set(key, entry);
+  }
+  return entry;
+}
 var STALE_AFTER_MS = 3 * 6e4;
-var lastFail = null;
-function failResult(error40) {
-  lastFail = { at: Date.now(), error: error40 };
+var failures = /* @__PURE__ */ new Map();
+function failResult(key, error40) {
+  failures.set(key, { at: Date.now(), error: error40 });
+  const cache = cacheFor(key);
   return {
     data: cache.data,
     error: error40,
     stale: cache.data != null && Date.now() - cache.at > STALE_AFTER_MS
   };
 }
-function credentialsPath() {
-  return (0, import_node_path6.join)((0, import_node_os.homedir)(), ".claude", ".credentials.json");
+function defaultConfigDir(home = (0, import_node_os.homedir)()) {
+  return (0, import_node_path6.join)(home, ".claude");
 }
-function readToken() {
-  if (process.platform === "darwin") {
-    const fromKeychain = readTokenFromKeychain();
-    if (fromKeychain.token) return fromKeychain;
+function isProfileDir(dir) {
+  try {
+    return (0, import_node_fs4.statSync)((0, import_node_path6.join)(dir, "projects")).isDirectory();
+  } catch {
+    return false;
   }
-  return readTokenFromFile();
+}
+function globalConfigPath(dir, isDefault) {
+  const candidates = [(0, import_node_path6.join)(dir, ".config.json"), (0, import_node_path6.join)(dir, ".claude.json")];
+  if (isDefault) candidates.push((0, import_node_path6.join)((0, import_node_path6.dirname)(dir), ".claude.json"));
+  return candidates.find((p) => (0, import_node_fs4.existsSync)(p)) ?? null;
+}
+function planLabel(tier) {
+  const t = (tier || "").toLowerCase();
+  for (const name of ["enterprise", "team", "max", "pro", "free"]) {
+    if (t.includes(name)) return name[0].toUpperCase() + name.slice(1);
+  }
+  return void 0;
+}
+function describeProfile(dir, isDefault) {
+  const p = {
+    configDir: dir,
+    isDefault,
+    displayName: isDefault ? "Default" : dir.split(/[\\/]/).pop() || dir
+  };
+  const configPath = globalConfigPath(dir, isDefault);
+  if (configPath) {
+    try {
+      const account = JSON.parse((0, import_node_fs4.readFileSync)(configPath, "utf8"))?.oauthAccount || {};
+      p.email = account.emailAddress || void 0;
+      p.organization = account.organizationName || void 0;
+      p.plan = planLabel(account.organizationRateLimitTier);
+    } catch {
+    }
+  }
+  if (p.email) p.displayName = `${p.displayName} \u2014 ${p.email}`;
+  return p;
+}
+function discoverProfiles(extra = [], home = (0, import_node_os.homedir)()) {
+  const defaultDir = defaultConfigDir(home);
+  const candidates = [];
+  if (process.env.CLAUDE_CONFIG_DIR) candidates.push(process.env.CLAUDE_CONFIG_DIR);
+  candidates.push(defaultDir);
+  try {
+    for (const name of (0, import_node_fs4.readdirSync)(home)) {
+      if (name.startsWith(".claude")) candidates.push((0, import_node_path6.join)(home, name));
+    }
+  } catch {
+  }
+  candidates.push(...extra);
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const candidate of candidates) {
+    const dir = (0, import_node_path6.resolve)(candidate);
+    if (seen.has(dir) || !isProfileDir(dir)) continue;
+    seen.add(dir);
+    out.push(describeProfile(dir, dir === (0, import_node_path6.resolve)(defaultDir)));
+  }
+  return out.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+}
+function resolveProfile(configDir, extra = []) {
+  const all = discoverProfiles(extra);
+  if (configDir) {
+    const match = all.find((p) => (0, import_node_path6.resolve)(p.configDir) === (0, import_node_path6.resolve)(configDir));
+    if (match) return match;
+  }
+  return all[0] ?? null;
+}
+function credentialsPath(configDir = defaultConfigDir()) {
+  return (0, import_node_path6.join)(configDir, ".credentials.json");
+}
+function readToken(profile) {
+  const dir = profile?.configDir ?? defaultConfigDir();
+  const isDefault = profile ? profile.isDefault : true;
+  const fromFile = readTokenFromFile(credentialsPath(dir));
+  if (fromFile.token) return fromFile;
+  if (process.platform === "darwin" && isDefault) return readTokenFromKeychain();
+  return {};
 }
 function parseCred(raw) {
   const j = JSON.parse(raw);
@@ -17343,9 +17424,9 @@ function parseCred(raw) {
   const expired = expiresAt > 0 && Date.now() > expiresAt;
   return { token, expired };
 }
-function readTokenFromFile() {
+function readTokenFromFile(path5) {
   try {
-    return parseCred((0, import_node_fs4.readFileSync)(credentialsPath(), "utf8"));
+    return parseCred((0, import_node_fs4.readFileSync)(path5, "utf8"));
   } catch {
     return {};
   }
@@ -17362,8 +17443,11 @@ function readTokenFromKeychain() {
     return {};
   }
 }
-async function fetchUsage(ua, force = false) {
+async function fetchUsage(ua, force = false, profile) {
   const now = Date.now();
+  const key = profile?.configDir ?? defaultConfigDir();
+  const cache = cacheFor(key);
+  const lastFail = failures.get(key);
   if (!force && cache.data && now - cache.at < CACHE_TTL_MS) {
     return { data: cache.data };
   }
@@ -17374,9 +17458,9 @@ async function fetchUsage(ua, force = false) {
       stale: cache.data != null && now - cache.at > STALE_AFTER_MS
     };
   }
-  const { token, expired } = readToken();
-  if (!token) return failResult("no-token");
-  if (expired) return failResult("token-expired");
+  const { token, expired } = readToken(profile);
+  if (!token) return failResult(key, "no-token");
+  if (expired) return failResult(key, "token-expired");
   try {
     const res = await fetch(ENDPOINT, {
       method: "GET",
@@ -17390,13 +17474,14 @@ async function fetchUsage(ua, force = false) {
         Accept: "application/json, text/plain, */*"
       }
     });
-    if (!res.ok) return failResult(`http-${res.status}`);
+    if (!res.ok) return failResult(key, `http-${res.status}`);
     const data = await res.json();
-    cache = { at: now, data };
-    lastFail = null;
+    cache.at = now;
+    cache.data = data;
+    failures.delete(key);
     return { data };
   } catch {
-    return failResult("network");
+    return failResult(key, "network");
   }
 }
 var METRICS = {
@@ -17530,10 +17615,10 @@ function computeCost(u, model) {
   const r = rateFor(model);
   return num(u.input_tokens, 0) * r.in + num(u.output_tokens, 0) * r.out + num(u.cache_read_input_tokens, 0) * r.cr + num(u.cache_creation_input_tokens, 0) * r.cw;
 }
-function projectsDir(base) {
-  return (0, import_node_path6.join)(base || (0, import_node_os.homedir)(), ".claude", "projects");
+function projectsDir(configDir = defaultConfigDir()) {
+  return (0, import_node_path6.join)(configDir, "projects");
 }
-var logCache = null;
+var logCaches = /* @__PURE__ */ new Map();
 var LOG_TTL_MS = 3e4;
 async function listJsonl(dir) {
   const res = [];
@@ -17557,9 +17642,11 @@ async function listJsonl(dir) {
   }
   return res;
 }
-async function getLogStats(force = false, baseDir) {
+async function getLogStats(force = false, configDir) {
   const now = Date.now();
-  if (!force && !baseDir && logCache && now - logCache.at < LOG_TTL_MS) {
+  const key = configDir ?? defaultConfigDir();
+  const logCache = logCaches.get(key);
+  if (!force && logCache && now - logCache.at < LOG_TTL_MS) {
     return logCache.data;
   }
   const out = {
@@ -17571,16 +17658,16 @@ async function getLogStats(force = false, baseDir) {
     sessionCost: 0,
     ok: true
   };
-  const files = await listJsonl(projectsDir(baseDir));
+  const files = await listJsonl(projectsDir(key));
   if (files.length === 0) {
     let dirExists = true;
     try {
-      await (0, import_promises2.stat)(projectsDir(baseDir));
+      await (0, import_promises2.stat)(projectsDir(key));
     } catch {
       dirExists = false;
     }
     out.ok = dirExists;
-    if (!baseDir) logCache = { at: now, data: out };
+    logCaches.set(key, { at: now, data: out });
     return out;
   }
   files.sort((a, b) => b.mtime - a.mtime);
@@ -17609,39 +17696,39 @@ async function getLogStats(force = false, baseDir) {
       if (e?.type !== "assistant" || !e?.message?.usage) continue;
       const u = e.message.usage;
       const model = e.message.model || "";
-      const key = e.requestId || e.message.id || "";
+      const key2 = e.requestId || e.message.id || "";
       const tokens = num(u.input_tokens, 0) + num(u.output_tokens, 0) + num(u.cache_creation_input_tokens, 0) + num(u.cache_read_input_tokens, 0);
       const cost = typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model);
       const ts = e.timestamp ? Date.parse(e.timestamp) : NaN;
       const isToday = !Number.isNaN(ts) && new Date(ts).toDateString() === todayStr;
       if (isToday) {
-        const k = "t:" + key;
-        if (!key || !seenToday.has(k)) {
-          if (key) seenToday.add(k);
+        const k = "t:" + key2;
+        if (!key2 || !seenToday.has(k)) {
+          if (key2) seenToday.add(k);
           out.todayTokens += tokens;
           out.todayCost += cost;
         }
       }
       const isThisWeek = !Number.isNaN(ts) && ts >= startOfWeekMs;
       if (isThisWeek) {
-        const k = "w:" + key;
-        if (!key || !seenWeek.has(k)) {
-          if (key) seenWeek.add(k);
+        const k = "w:" + key2;
+        if (!key2 || !seenWeek.has(k)) {
+          if (key2) seenWeek.add(k);
           out.weekTokens += tokens;
           out.weekCost += cost;
         }
       }
       if (f.path === sessionPath) {
-        const k = "s:" + key;
-        if (!key || !seenSession.has(k)) {
-          if (key) seenSession.add(k);
+        const k = "s:" + key2;
+        if (!key2 || !seenSession.has(k)) {
+          if (key2) seenSession.add(k);
           out.sessionTokens += tokens;
           out.sessionCost += cost;
         }
       }
     }
   }
-  if (!baseDir) logCache = { at: now, data: out };
+  logCaches.set(key, { at: now, data: out });
   return out;
 }
 function fmtTokens(n) {
@@ -17789,6 +17876,10 @@ function syncCarousel(act, s) {
   }
   carousel.set(act.id, cur);
 }
+function profileFor(s) {
+  const extra = (s.profilePath || "").trim();
+  return resolveProfile(s.profile, extra ? [extra] : []);
+}
 async function draw(act, s) {
   const metric = s.metric || "session";
   if (metric === "carousel") return drawCarousel(act, s);
@@ -17797,7 +17888,7 @@ async function draw(act, s) {
 }
 async function drawCarousel(act, s) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
-  const { data, error: error40, stale } = await fetchUsage(ua, false);
+  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s));
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const face = carousel.get(act.id)?.face ?? 0;
@@ -17847,7 +17938,7 @@ async function drawCarousel(act, s) {
 }
 async function drawGauge(act, s, metric) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
-  const { data, error: error40, stale } = await fetchUsage(ua, false);
+  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s));
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const title = (s.title || "").trim();
@@ -17865,7 +17956,7 @@ async function drawGauge(act, s, metric) {
   );
 }
 async function drawStat(act, s, metric) {
-  const stats = await getLogStats(false);
+  const stats = await getLogStats(false, profileFor(s)?.configDir);
   const title = (s.title || "").trim();
   if (!stats.ok) {
     await act.setImage(
@@ -17907,10 +17998,25 @@ async function drawStat(act, s, metric) {
   );
 }
 async function refreshAll(force) {
-  await Promise.allSettled([fetchUsage(DEFAULT_UA, force), getLogStats(force)]);
+  const pending = [];
+  const profiles = /* @__PURE__ */ new Map();
   for (const act of visible) {
     try {
       const s = await act.getSettings();
+      pending.push([act, s]);
+      const p = profileFor(s);
+      profiles.set(p?.configDir ?? "", p);
+    } catch {
+    }
+  }
+  await Promise.allSettled(
+    [...profiles.values()].flatMap((p) => [
+      fetchUsage(DEFAULT_UA, force, p ?? void 0),
+      getLogStats(force, p?.configDir)
+    ])
+  );
+  for (const [act, s] of pending) {
+    try {
       await draw(act, s);
     } catch {
     }
@@ -17933,6 +18039,21 @@ var UsageMeter = class extends (_a = SingletonAction) {
   async onDidReceiveSettings(ev) {
     syncCarousel(ev.action, ev.payload.settings);
     await draw(ev.action, ev.payload.settings);
+  }
+  /** The property inspector is a sandboxed webview with no filesystem access,
+   *  so the profile dropdown can't enumerate config dirs itself. sdpi-components
+   *  asks for its options over this channel (`datasource="profiles"`). */
+  onSendToPlugin(ev) {
+    if (ev?.payload?.event !== "profiles") return;
+    const items = discoverProfiles().map((p) => ({
+      label: p.plan ? `${p.displayName} (${p.plan})` : p.displayName,
+      value: p.configDir
+    }));
+    plugin_default.ui.current?.sendToPropertyInspector({
+      event: "profiles",
+      // An empty list would leave the dropdown blank with no explanation.
+      items: items.length ? items : [{ label: "No Claude data found", value: "" }]
+    });
   }
   async onKeyDown(ev) {
     const s = ev.payload.settings;

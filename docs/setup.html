@@ -116,6 +116,29 @@
       <p>Keys populate within a second or two of being placed.</p>
 
       <h2>Settings</h2>
+      <h3>Profile</h3>
+      <p>
+        Which Claude account the key reads. Most people have one and can leave
+        this alone. If you run more than one — a work login and a personal one,
+        kept apart with <code>CLAUDE_CONFIG_DIR</code> — set it
+        <strong>per key</strong>, so one key watches work and the next watches
+        personal, side by side on the same deck.
+      </p>
+      <p>
+        The dropdown lists every config folder found: <code>~/.claude</code> and
+        anything beside it holding a <code>projects</code> directory. If yours
+        lives somewhere else entirely, choose the blank entry and type the path
+        under <strong>Custom folder</strong>.
+      </p>
+      <p>
+        One caveat on macOS. Claude Code stores its token in the login Keychain
+        under a single name, with no per-account variant, so only your default
+        profile can read a token from there. A second profile needs its own
+        <code>.credentials.json</code> inside its config folder; without one, its
+        limit gauges show <strong>open Claude</strong> while tokens and cost still
+        work, since those come from the transcripts on disk.
+      </p>
+
       <h3>Metric</h3>
       <p>
         Which value the key shows: <strong>Carousel</strong>,

@@ -31,6 +31,25 @@
     </style>
   </head>
   <body>
+    <sdpi-item label="Profile">
+      <sdpi-select setting="profile" datasource="profiles" id="profile-select"></sdpi-select>
+    </sdpi-item>
+    <div class="group" id="group-profile" hidden>
+      <sdpi-item label="Custom folder">
+        <sdpi-textfield setting="profilePath" placeholder="/path/to/.claude"></sdpi-textfield>
+      </sdpi-item>
+    </div>
+    <sdpi-item label="">
+      <small class="hint">
+        Each profile is a separate Claude account — a config folder holding a
+        <code>projects</code> directory. Set it <b>per key</b>, so one key can
+        watch work and the next personal. Only <code>~/.claude</code> and folders
+        beside it are found automatically; if yours lives elsewhere (via
+        <code>CLAUDE_CONFIG_DIR</code>), type the path under
+        <b>Custom folder</b>.
+      </small>
+    </sdpi-item>
+
     <sdpi-item label="Metric">
       <sdpi-select setting="metric" default="session" id="metric-select">
         <optgroup label="Limits — live (/usage)">
@@ -169,6 +188,16 @@
         select.addEventListener("input", applyVisibility); // composed, crosses the shadow DOM
         select.addEventListener("change", applyVisibility);
 
+        // The custom-folder field is only useful when discovery came up empty
+        // or the user wants a folder it can't see.
+        const profile = document.getElementById("profile-select");
+        const showProfilePath = () => {
+          const v = profile.value;
+          document.getElementById("group-profile").hidden = !(v === "" || v == null);
+        };
+        profile.addEventListener("input", showProfilePath);
+        profile.addEventListener("change", showProfilePath);
+
         const item = document.getElementById("carousel-interval-item");
         const range = document.getElementById("carousel-interval-range");
         const showInterval = () => {
@@ -184,6 +213,7 @@
         const t = setInterval(() => {
           applyVisibility();
           showInterval();
+          showProfilePath();
           if (++tries >= 20) clearInterval(t);
         }, 250);
       });
