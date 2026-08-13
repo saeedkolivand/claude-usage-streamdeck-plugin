@@ -436,7 +436,7 @@ function sendProfiles(ev: any): void {
     label: p.plan ? `${p.displayName} (${p.plan})` : p.displayName,
     value: p.configDir,
   }));
-  streamDeck.ui.current?.sendToPropertyInspector({
+  streamDeck.ui.sendToPropertyInspector({
     event: "profiles",
     // An empty list would leave the dropdown blank with no explanation.
     items: items.length ? items : [{ label: "No Claude data found", value: "" }],

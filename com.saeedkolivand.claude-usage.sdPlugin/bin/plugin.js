@@ -18386,7 +18386,7 @@ function sendProfiles(ev) {
     label: p.plan ? `${p.displayName} (${p.plan})` : p.displayName,
     value: p.configDir
   }));
-  plugin_default.ui.current?.sendToPropertyInspector({
+  plugin_default.ui.sendToPropertyInspector({
     event: "profiles",
     // An empty list would leave the dropdown blank with no explanation.
     items: items.length ? items : [{ label: "No Claude data found", value: "" }]
