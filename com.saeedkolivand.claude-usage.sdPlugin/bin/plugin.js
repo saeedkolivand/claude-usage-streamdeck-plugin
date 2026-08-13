@@ -17645,8 +17645,8 @@ function svgKey(opts) {
   const pctText = opts.pct == null ? "--" : `${Math.round(opts.pct)}%`;
   const pctSize = pctText.length >= 4 ? 16 : 20;
   const pctBaseline = cy + Math.round(pctSize * 0.34);
-  const noteFill = opts.stale ? "#f59e0b" : "#e5e7eb";
-  const titleFill = "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : opts.fg || "#e5e7eb";
+  const titleFill = opts.muted || "#9ca3af";
   const glance = 21;
   let labelSize = glance;
   const labelW = textWidthEm(opts.label);
@@ -17668,13 +17668,13 @@ function svgKey(opts) {
     noteMarkup = `<text x="${midX}" y="134" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc2(opts.note)}</text>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
   <text x="${midX}" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${titleFill}">${esc2(opts.label)}</text>
   <g transform="rotate(-90 ${cx} ${cy})">
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#3a4250" stroke-width="${sw}"/>
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${opts.col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circ.toFixed(2)}"/>
   </g>
-  <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="#ffffff">${pctText}</text>
+  <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.fg || "#ffffff"}">${pctText}</text>
   ${noteMarkup}
 </svg>`;
 }
@@ -17985,7 +17985,7 @@ function writeStatsExport(entries) {
 function svgSpark(opts) {
   const size = 144;
   const cx = 72;
-  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : opts.muted || "#9ca3af";
   const n = Math.max(1, opts.bars.length);
   const max = Math.max(...opts.bars, 1);
   const areaW = 108;
@@ -18001,10 +18001,10 @@ function svgSpark(opts) {
     return `<rect x="${x}" y="${baseY - h}" width="${barW.toFixed(1)}" height="${h}" rx="1.5" fill="${fill}"/>`;
   }).join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="30" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#e5e7eb">${esc2(opts.label)}</text>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
+  <text x="${cx}" y="30" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="${opts.muted || "#e5e7eb"}">${esc2(opts.label)}</text>
   <rect x="${cx - 16}" y="38" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
-  <text x="${cx}" y="72" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="#ffffff">${esc2(opts.value)}</text>
+  <text x="${cx}" y="72" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="${opts.fg || "#ffffff"}">${esc2(opts.value)}</text>
   ${bars}
   <text x="${cx}" y="136" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc2(opts.sub)}</text>
 </svg>`;
@@ -18060,7 +18060,7 @@ function svgBig(opts) {
   const fillW = p / 100 * barW;
   const bar = `<rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="${barH / 2}" fill="#2a313d"/>` + (fillW > 0 ? `<rect x="${barX}" y="${barY}" width="${fillW.toFixed(1)}" height="${barH}" rx="${barH / 2}" fill="${opts.col}"/>` : "");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
   ${header}
   <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc2(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${symSize}" font-weight="700">%</tspan>`}</text>
   ${bar}
@@ -18074,15 +18074,15 @@ function svgStat(opts) {
   const len = opts.value.length;
   const valSize = len <= 4 ? 40 : len === 5 ? 34 : 28;
   const valBaseline = 82 + Math.round((40 - valSize) * 0.2);
-  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : opts.muted || "#9ca3af";
   let labelSize = 18;
   const labelW = textWidthEm(opts.label);
   while (labelSize > 12 && labelW * labelSize > 130) labelSize -= 1;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="#e5e7eb">${esc2(opts.label)}</text>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
+  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${opts.muted || "#e5e7eb"}">${esc2(opts.label)}</text>
   <rect x="${cx - 16}" y="42" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
-  <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc2(opts.value)}</text>
+  <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="${opts.fg || "#ffffff"}">${esc2(opts.value)}</text>
   <text x="${cx}" y="120" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="${noteFill}">${esc2(opts.sub)}</text>
 </svg>`;
 }
@@ -18120,17 +18120,25 @@ function svgDial(opts) {
   const len = opts.value.length;
   const valSize = len <= 4 ? 32 : len <= 6 ? 26 : 21;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <rect width="${W}" height="${H}" fill="#0f0f0f"/>
-  <text x="14" y="25" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="#8b93a3">${esc2(opts.label.slice(0, 14).toUpperCase())}</text>
+  <rect width="${W}" height="${H}" fill="${opts.bg || "#0f0f0f"}"/>
+  <text x="14" y="25" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${opts.muted || "#8b93a3"}">${esc2(opts.label.slice(0, 14).toUpperCase())}</text>
   <rect x="14" y="31" width="20" height="2.5" rx="1.25" fill="${opts.accent}"/>
-  <text x="14" y="66" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc2(opts.value)}</text>
-  <text x="14" y="88" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${opts.stale ? "#f59e0b" : "#9ca3af"}">${esc2(opts.sub)}</text>
+  <text x="14" y="66" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="${opts.fg || "#ffffff"}">${esc2(opts.value)}</text>
+  <text x="14" y="88" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${opts.stale ? "#f59e0b" : opts.muted || "#9ca3af"}">${esc2(opts.sub)}</text>
   ${right}
   ${opts.stale ? `<circle cx="190" cy="11" r="3.5" fill="#f59e0b"/>` : ""}
 </svg>`;
 }
 
 // src/plugin.ts
+function hexOf(v) {
+  const t = (v || "").trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(t) ? t : void 0;
+}
+var bgOf = (s) => hexOf(s.bg);
+function themeOf(s) {
+  return { bg: hexOf(s.bg), fg: hexOf(s.textColor), muted: hexOf(s.labelColor) };
+}
 var ACCENT = "#d97757";
 var LOG_METRICS = /* @__PURE__ */ new Set([
   "tokens_today",
@@ -18220,7 +18228,7 @@ async function drawBurn(act, s) {
   const value = rate != null ? `${rate}%/h` : tpm > 0 ? `${fmtTokens(tpm)}/m` : "idle";
   const sub = (s.subtitle || "").trim() || (rate != null ? burnNote(pct, rate) || "5h window" : tpm > 0 ? "tokens/min" : "5h window");
   await act.setImage(
-    toDataUri(svgStat({ label: title || "Burn", value, sub, accent: ACCENT, stale: !!stale }))
+    toDataUri(svgStat({ label: title || "Burn", value, sub, accent: hexOf(s.accentColor) || ACCENT, stale: !!stale, ...themeOf(s) }))
   );
 }
 async function drawHist(act, s, metric) {
@@ -18239,8 +18247,9 @@ async function drawHist(act, s, metric) {
         value: cost ? fmtCost(today.cost) : fmtTokens(today.tokens),
         sub: (s.subtitle || "").trim() || "7 days",
         bars,
-        accent: ACCENT,
-        stale: false
+        accent: hexOf(s.accentColor) || ACCENT,
+        stale: false,
+        ...themeOf(s)
       })
     )
   );
@@ -18273,7 +18282,11 @@ async function drawDial(act, s) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
   const dir = p?.configDir ?? defaultConfigDir();
   const title = (s.title || "").trim();
-  const push = (o) => act.setFeedback({ canvas: toDataUri(svgDial(o)) });
+  const push = (o) => act.setFeedback({
+    canvas: toDataUri(
+      svgDial({ ...o, ...themeOf(s), accent: hexOf(s.accentColor) || o.accent })
+    )
+  });
   if (metric === "burn") {
     const { data: data2, stale: stale2 } = await fetchUsage(ua, false, p ?? void 0);
     const pct2 = data2 ? pickMetric(data2, "session").pct : null;
@@ -18358,6 +18371,7 @@ async function drawCarousel(act, s) {
           note: note2,
           col: color(null, warn, crit),
           stale: true,
+          bg: bgOf(s),
           face,
           faces: FACES.length,
           accent: pal.accent,
@@ -18380,6 +18394,7 @@ async function drawCarousel(act, s) {
         note,
         col,
         stale: !!stale,
+        bg: bgOf(s),
         face,
         faces: FACES.length,
         accent: pal.accent,
@@ -18398,7 +18413,7 @@ async function drawGauge(act, s, metric) {
   if (!data) {
     const note2 = error40 === "no-token" || error40 === "token-expired" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
     await act.setImage(
-      toDataUri(svgKey({ label: title || "Claude", pct: null, note: note2, col: color(null, warn, crit), stale: true }))
+      toDataUri(svgKey({ label: title || "Claude", pct: null, note: note2, col: color(null, warn, crit), stale: true, ...themeOf(s) }))
     );
     return;
   }
@@ -18406,7 +18421,7 @@ async function drawGauge(act, s, metric) {
   maybeAlert(act, s, metric, pct, crit);
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   await act.setImage(
-    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale }))
+    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale, ...themeOf(s) }))
   );
 }
 async function drawStat(act, s, metric) {
@@ -18414,7 +18429,7 @@ async function drawStat(act, s, metric) {
   const title = (s.title || "").trim();
   if (!stats.ok) {
     await act.setImage(
-      toDataUri(svgStat({ label: title || "Claude", value: "--", sub: "no logs", accent: ACCENT, stale: true }))
+      toDataUri(svgStat({ label: title || "Claude", value: "--", sub: "no logs", accent: hexOf(s.accentColor) || ACCENT, stale: true, ...themeOf(s) }))
     );
     return;
   }
@@ -18448,7 +18463,7 @@ async function drawStat(act, s, metric) {
   }
   const subtitle = (s.subtitle || "").trim();
   await act.setImage(
-    toDataUri(svgStat({ label: title || label, value, sub: subtitle || sub, accent: ACCENT, stale: false }))
+    toDataUri(svgStat({ label: title || label, value, sub: subtitle || sub, accent: hexOf(s.accentColor) || ACCENT, stale: false, ...themeOf(s) }))
   );
 }
 async function refreshAll(force) {

@@ -497,6 +497,9 @@ export function svgKey(opts: {
   note: string;
   col: string;
   stale: boolean;
+  bg?: string; // per-key background override; default is the built-in dark
+  fg?: string; // value/number color override; default white/bright
+  muted?: string; // label/sub color override; default the built-in grays
 }): string {
   const size = 144;
   const midX = size / 2; // 72 — canvas center, for the top title and wide status notes
@@ -519,8 +522,8 @@ export function svgKey(opts: {
   const pctBaseline = cy + Math.round(pctSize * 0.34); // optical vertical centering
   // Countdown (and status notes) take the bright tone; the title takes the muted
   // gray — swapped from the obvious pairing so the remaining time reads first.
-  const noteFill = opts.stale ? "#f59e0b" : "#e5e7eb";
-  const titleFill = "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : opts.fg || "#e5e7eb";
+  const titleFill = opts.muted || "#9ca3af";
   // Title and reset countdown share one "read-at-a-glance" size so the two pieces
   // of text on the key match. Fit the title by actual width, not character count,
   // so short custom titles keep the full size (matching the built-in "Session" /
@@ -566,13 +569,13 @@ export function svgKey(opts: {
   }
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
   <text x="${midX}" y="20" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${titleFill}">${esc(opts.label)}</text>
   <g transform="rotate(-90 ${cx} ${cy})">
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#3a4250" stroke-width="${sw}"/>
     <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${opts.col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(2)} ${circ.toFixed(2)}"/>
   </g>
-  <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="#ffffff">${pctText}</text>
+  <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.fg || "#ffffff"}">${pctText}</text>
   ${noteMarkup}
 </svg>`;
 }
@@ -1043,10 +1046,13 @@ export function svgSpark(opts: {
   bars: number[];
   accent: string;
   stale: boolean;
+  bg?: string; // per-key background override; default is the built-in dark
+  fg?: string; // value/number color override; default white/bright
+  muted?: string; // label/sub color override; default the built-in grays
 }): string {
   const size = 144;
   const cx = 72;
-  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : opts.muted || "#9ca3af";
   const n = Math.max(1, opts.bars.length);
   const max = Math.max(...opts.bars, 1);
   const areaW = 108;
@@ -1067,10 +1073,10 @@ export function svgSpark(opts: {
   // Same tile chrome as svgStat (rounded #0f1216, Arial, accent underline) so a
   // chart key sits next to a stat key as one family.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="30" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#e5e7eb">${esc(opts.label)}</text>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
+  <text x="${cx}" y="30" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="${opts.muted || "#e5e7eb"}">${esc(opts.label)}</text>
   <rect x="${cx - 16}" y="38" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
-  <text x="${cx}" y="72" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
+  <text x="${cx}" y="72" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="${opts.fg || "#ffffff"}">${esc(opts.value)}</text>
   ${bars}
   <text x="${cx}" y="136" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc(opts.sub)}</text>
 </svg>`;
@@ -1103,6 +1109,9 @@ export function svgBig(opts: {
   note: string;
   col: string;
   stale: boolean;
+  bg?: string; // per-key background override; default is the built-in dark
+  fg?: string; // value/number color override; default white/bright
+  muted?: string; // label/sub color override; default the built-in grays
   face?: number;
   faces?: number;
   accent?: string; // signature color of this face (label, icon, active dot)
@@ -1167,7 +1176,7 @@ export function svgBig(opts: {
       : "");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
   ${header}
   <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${symSize}" font-weight="700">%</tspan>`}</text>
   ${bar}
@@ -1183,13 +1192,16 @@ export function svgStat(opts: {
   sub: string;
   accent: string;
   stale: boolean;
+  bg?: string; // per-key background override; default is the built-in dark
+  fg?: string; // value/number color override; default white/bright
+  muted?: string; // label/sub color override; default the built-in grays
 }): string {
   const size = 144;
   const cx = 72;
   const len = opts.value.length;
   const valSize = len <= 4 ? 40 : len === 5 ? 34 : 28;
   const valBaseline = 82 + Math.round((40 - valSize) * 0.2);
-  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const noteFill = opts.stale ? "#f59e0b" : opts.muted || "#9ca3af";
   // Fit a custom title to the tile by width, mirroring svgKey, so a long override
   // doesn't overflow the canvas; the built-in "Tokens" / "Cost" stay at 18.
   let labelSize = 18;
@@ -1197,10 +1209,10 @@ export function svgStat(opts: {
   while (labelSize > 12 && labelW * labelSize > 130) labelSize -= 1;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
-  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="#e5e7eb">${esc(opts.label)}</text>
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
+  <text x="${cx}" y="34" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${opts.muted || "#e5e7eb"}">${esc(opts.label)}</text>
   <rect x="${cx - 16}" y="42" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
-  <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
+  <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="${opts.fg || "#ffffff"}">${esc(opts.value)}</text>
   <text x="${cx}" y="120" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="${noteFill}">${esc(opts.sub)}</text>
 </svg>`;
 }
@@ -1219,6 +1231,9 @@ export function svgDial(opts: {
   icon?: FaceIcon;
   bars?: number[]; // 7-day mini chart replaces the ring (log metrics)
   stale: boolean;
+  bg?: string; // per-key background override; default is the built-in dark
+  fg?: string; // value/number color override; default white/bright
+  muted?: string; // label/sub color override; default the built-in grays
 }): string {
   const W = 200;
   const H = 100;
@@ -1256,11 +1271,11 @@ export function svgDial(opts: {
   const len = opts.value.length;
   const valSize = len <= 4 ? 32 : len <= 6 ? 26 : 21;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <rect width="${W}" height="${H}" fill="#0f0f0f"/>
-  <text x="14" y="25" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="#8b93a3">${esc(opts.label.slice(0, 14).toUpperCase())}</text>
+  <rect width="${W}" height="${H}" fill="${opts.bg || "#0f0f0f"}"/>
+  <text x="14" y="25" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="${opts.muted || "#8b93a3"}">${esc(opts.label.slice(0, 14).toUpperCase())}</text>
   <rect x="14" y="31" width="20" height="2.5" rx="1.25" fill="${opts.accent}"/>
-  <text x="14" y="66" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
-  <text x="14" y="88" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${opts.stale ? "#f59e0b" : "#9ca3af"}">${esc(opts.sub)}</text>
+  <text x="14" y="66" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="${opts.fg || "#ffffff"}">${esc(opts.value)}</text>
+  <text x="14" y="88" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${opts.stale ? "#f59e0b" : opts.muted || "#9ca3af"}">${esc(opts.sub)}</text>
   ${right}
   ${opts.stale ? `<circle cx="190" cy="11" r="3.5" fill="#f59e0b"/>` : ""}
 </svg>`;

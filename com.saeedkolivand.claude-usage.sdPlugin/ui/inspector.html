@@ -72,6 +72,36 @@
       </sdpi-select>
     </sdpi-item>
 
+    <details>
+      <summary>Appearance — colors for this key</summary>
+      <sdpi-item label="Background">
+        <sdpi-color setting="bg"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Numbers">
+        <sdpi-color setting="textColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Labels">
+        <sdpi-color setting="labelColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Accent">
+        <sdpi-color setting="accentColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          Colors for <b>this key only</b> (works on the Stream Deck + touch strip
+          too). <b>Background</b> is the whole tile. <b>Numbers</b> is the big
+          value (the % or token count). <b>Labels</b> is the title and the small
+          text under the value. <b>Accent</b> is the little underline, the chart
+          bars and the icons. Pickers you don't touch keep the built-in look.
+          The Carousel keeps its own face colors (set below) — only
+          <b>Background</b> applies to it.
+        </small>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-button id="reset-colors">Reset colors to default</sdpi-button>
+      </sdpi-item>
+    </details>
+
     <!-- Carousel only -->
     <div class="group" id="group-carousel" hidden>
       <sdpi-item label="Auto-rotate">
@@ -217,6 +247,15 @@
         };
         range.addEventListener("input", showInterval);
         range.addEventListener("change", showInterval);
+
+        // "Reset colors": clear the four appearance settings so every face
+        // falls back to the built-in look. The key repaints immediately;
+        // reopen this window to see the pickers cleared.
+        document.getElementById("reset-colors").addEventListener("click", async () => {
+          const { settings } = await SDPIComponents.streamDeckClient.getSettings();
+          for (const k of ["bg", "textColor", "labelColor", "accentColor"]) delete settings[k];
+          await SDPIComponents.streamDeckClient.setSettings(settings);
+        });
 
         // Persisted values are applied asynchronously after the PI connects;
         // poll briefly until they land, then stop.

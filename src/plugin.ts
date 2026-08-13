@@ -52,7 +52,22 @@ type Settings = {
   colorSession?: string; // carousel face base color override (default fuchsia)
   colorWeekly?: string; // carousel face base color override (default sky)
   alertFlash?: boolean; // false disables the key flash on crossing the Red threshold
+  bg?: string; // background color for this key's faces (and the Deck+ strip)
+  accentColor?: string; // identity accent (ticks, bars, icons) override
+  textColor?: string; // big value / number color override
+  labelColor?: string; // label and sub-line color override
 };
+
+/** A user color when it's a valid hex, else undefined (= built-in default). */
+function hexOf(v?: string): string | undefined {
+  const t = (v || "").trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(t) ? t : undefined;
+}
+const bgOf = (s: Settings) => hexOf(s.bg);
+/** The four appearance overrides for the plain (non-carousel) faces. */
+function themeOf(s: Settings): { bg?: string; fg?: string; muted?: string } {
+  return { bg: hexOf(s.bg), fg: hexOf(s.textColor), muted: hexOf(s.labelColor) };
+}
 
 const ACCENT = "#d97757"; // Claude coral, used on stat tiles
 const LOG_METRICS = new Set([
@@ -183,7 +198,7 @@ async function drawBurn(act: any, s: Settings): Promise<void> {
     (s.subtitle || "").trim() ||
     (rate != null ? burnNote(pct, rate) || "5h window" : tpm > 0 ? "tokens/min" : "5h window");
   await act.setImage(
-    toDataUri(svgStat({ label: title || "Burn", value, sub, accent: ACCENT, stale: !!stale })),
+    toDataUri(svgStat({ label: title || "Burn", value, sub, accent: hexOf(s.accentColor) || ACCENT, stale: !!stale, ...themeOf(s) })),
   );
 }
 
@@ -203,8 +218,9 @@ async function drawHist(act: any, s: Settings, metric: string): Promise<void> {
         value: cost ? fmtCost(today.cost) : fmtTokens(today.tokens),
         sub: (s.subtitle || "").trim() || "7 days",
         bars,
-        accent: ACCENT,
+        accent: hexOf(s.accentColor) || ACCENT,
         stale: false,
+        ...themeOf(s),
       }),
     ),
   );
@@ -238,7 +254,11 @@ async function drawDial(act: any, s: Settings): Promise<void> {
   const dir = p?.configDir ?? defaultConfigDir();
   const title = (s.title || "").trim();
   const push = (o: Parameters<typeof svgDial>[0]) =>
-    act.setFeedback({ canvas: toDataUri(svgDial(o)) });
+    act.setFeedback({
+      canvas: toDataUri(
+        svgDial({ ...o, ...themeOf(s), accent: hexOf(s.accentColor) || o.accent }),
+      ),
+    });
 
   if (metric === "burn") {
     const { data, stale } = await fetchUsage(ua, false, p ?? undefined);
@@ -327,7 +347,7 @@ async function drawCarousel(act: any, s: Settings): Promise<void> {
     await act.setImage(
       toDataUri(
         svgBig({
-          label, pct: null, note, col: color(null, warn, crit), stale: true,
+          label, pct: null, note, col: color(null, warn, crit), stale: true, bg: bgOf(s),
           face, faces: FACES.length, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
         }),
       ),
@@ -343,7 +363,7 @@ async function drawCarousel(act: any, s: Settings): Promise<void> {
   await act.setImage(
     toDataUri(
       svgBig({
-        label, pct, note, col, stale: !!stale,
+        label, pct, note, col, stale: !!stale, bg: bgOf(s),
         face, faces: FACES.length, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
       }),
     ),
@@ -365,7 +385,7 @@ async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
           ? "offline"
           : "…";
     await act.setImage(
-      toDataUri(svgKey({ label: title || "Claude", pct: null, note, col: color(null, warn, crit), stale: true })),
+      toDataUri(svgKey({ label: title || "Claude", pct: null, note, col: color(null, warn, crit), stale: true, ...themeOf(s) })),
     );
     return;
   }
@@ -376,7 +396,7 @@ async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   // stale comes from fetchUsage: cached data older than its debounce window,
   // not merely "the latest refresh failed" — a single blip stays bright.
   await act.setImage(
-    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale })),
+    toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale, ...themeOf(s) })),
   );
 }
 
@@ -385,7 +405,7 @@ async function drawStat(act: any, s: Settings, metric: string): Promise<void> {
   const title = (s.title || "").trim(); // custom label; empty = use the metric default
   if (!stats.ok) {
     await act.setImage(
-      toDataUri(svgStat({ label: title || "Claude", value: "--", sub: "no logs", accent: ACCENT, stale: true })),
+      toDataUri(svgStat({ label: title || "Claude", value: "--", sub: "no logs", accent: hexOf(s.accentColor) || ACCENT, stale: true, ...themeOf(s) })),
     );
     return;
   }
@@ -408,7 +428,7 @@ async function drawStat(act: any, s: Settings, metric: string): Promise<void> {
   }
   const subtitle = (s.subtitle || "").trim(); // custom scope line; empty = default
   await act.setImage(
-    toDataUri(svgStat({ label: title || label, value, sub: subtitle || sub, accent: ACCENT, stale: false })),
+    toDataUri(svgStat({ label: title || label, value, sub: subtitle || sub, accent: hexOf(s.accentColor) || ACCENT, stale: false, ...themeOf(s) })),
   );
 }
 
