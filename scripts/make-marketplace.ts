@@ -17,7 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { svgKey, svgStat, svgBig, color } from "../src/usage-core";
+import { svgKey, svgStat, svgBig, svgSpark, color } from "../src/usage-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -46,6 +46,12 @@ const STATS = [
 const CAROUSEL = [
   svgBig({ label: "5 HOURS", pct: 33, note: "2h 14m", col: "#f0abfc", stale: false, face: 0, faces: 2, accent: "#e879f9", icon: "clock", noteCol: "#f5d0fe" }),
   svgBig({ label: "WEEKLY", pct: 61, note: "4d 6h", col: color(61, WARN, CRIT), stale: false, face: 1, faces: 2, accent: "#38bdf8", icon: "calendar", noteCol: "#bae6fd" }),
+];
+// The faces added in 1.10: per-model weekly cap, burn rate, 7-day history chart.
+const NEW_FACES = [
+  svgKey({ label: "Fable", pct: 60, note: "3d 22h", col: color(60, WARN, CRIT), stale: false }),
+  svgStat({ label: "Burn", value: "12%/h", sub: "full ~3h 40m", accent: ACCENT, stale: false }),
+  svgSpark({ label: "Tokens", value: "1.2M", sub: "7 days", bars: [420_000, 810_000, 260_000, 0, 1_400_000, 950_000, 1_200_000], accent: ACCENT, stale: false }),
 ];
 
 /** Strip the key SVG's outer wrapper and place its body at (x,y), scaled. */
@@ -100,7 +106,7 @@ await render(
   [
     text(W / 2, 250, "AI Coding Usage Meter", 78, 800, "#ffffff"),
     text(W / 2, 312, "Live limits, tokens &amp; cost — right on your Stream Deck", 32, 400, MUTED),
-    row([...GAUGES, ...CAROUSEL, ...STATS], 168, 24, 430, W),
+    row([...GAUGES, ...CAROUSEL, ...STATS, NEW_FACES[2]], 168, 24, 430, W),
     text(W / 2, 800, "Windows &amp; macOS   ·   Free &amp; open source   ·   Works with Claude Code", 26, 600, MUTED, 0.5),
   ].join("\n")
 );
@@ -152,7 +158,20 @@ await render(
   [
     text(W / 2, 175, "ONE ACTION", 26, 700, ACCENT, 3),
     text(W / 2, 248, "As many keys as you like", 60, 800, "#ffffff"),
-    row([...GAUGES, ...CAROUSEL, ...STATS], 168, 24, 410, W),
+    row([...GAUGES, ...CAROUSEL, ...STATS, NEW_FACES[2]], 168, 24, 410, W),
     text(W / 2, 800, "All keys share one cached request · tap any key to refresh", 28, 400, MUTED),
+  ].join("\n")
+);
+
+// Gallery 5 — the 1.10 additions.
+await render(
+  "gallery-5.png",
+  W,
+  H,
+  [
+    text(W / 2, 175, "NEW", 26, 700, ACCENT, 3),
+    text(W / 2, 248, "Model caps, burn rate &amp; history", 60, 800, "#ffffff"),
+    row(NEW_FACES, 300, 56, 380, W),
+    text(W / 2, 800, "Per-model weekly limit · %/h with time-to-full · 7-day charts that survive log pruning", 28, 400, MUTED),
   ].join("\n")
 );

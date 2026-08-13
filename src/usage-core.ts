@@ -1012,12 +1012,15 @@ export function svgSpark(opts: {
       return `<rect x="${x}" y="${baseY - h}" width="${barW.toFixed(1)}" height="${h}" rx="1.5" fill="${fill}"/>`;
     })
     .join("");
+  // Same tile chrome as svgStat (rounded #0f1216, Arial, accent underline) so a
+  // chart key sits next to a stat key as one family.
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" fill="#1f2937"/>
-  <text x="${cx}" y="26" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="600" fill="${opts.accent}">${esc(opts.label)}</text>
-  <text x="${cx}" y="70" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#f9fafb">${esc(opts.value)}</text>
+  <rect width="${size}" height="${size}" rx="20" fill="#0f1216"/>
+  <text x="${cx}" y="30" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="700" fill="#e5e7eb">${esc(opts.label)}</text>
+  <rect x="${cx - 16}" y="38" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
+  <text x="${cx}" y="72" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
   ${bars}
-  <text x="${cx}" y="136" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="${noteFill}">${esc(opts.sub)}</text>
+  <text x="${cx}" y="136" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc(opts.sub)}</text>
 </svg>`;
 }
 
