@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { svgKey, svgStat, svgBig, color } from "../src/usage-core";
+import { svgKey, svgStat, svgBig, svgSpark, color } from "../src/usage-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "docs", "preview.png");
@@ -34,7 +34,7 @@ const FACES: string[] = [
 	svgBig({ label: "WEEKLY", pct: 61, note: "4d 6h", col: color(61, WARN, CRIT), stale: false, face: 1, faces: 2, accent: C_WEEKLY.accent, icon: "calendar", noteCol: C_WEEKLY.noteCol }),
 	svgStat({ label: "Tokens", value: "1.2M", sub: "today", accent: ACCENT, stale: false }),
 	svgStat({ label: "Cost", value: "$8.40", sub: "7 days", accent: ACCENT, stale: false }),
-	svgStat({ label: "Tokens", value: "318K", sub: "session", accent: ACCENT, stale: false }),
+	svgSpark({ label: "Tokens", value: "1.2M", sub: "7 days", bars: [420_000, 810_000, 260_000, 0, 1_400_000, 950_000, 1_200_000], accent: ACCENT, stale: false }),
 ];
 
 const KEY = 144;
