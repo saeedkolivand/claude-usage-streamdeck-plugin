@@ -40,11 +40,24 @@ at once. Two families:
 | **Session (5h)** | Limit (live) | `oauth/usage` endpoint (same as Claude Code's `/usage`) | big % + ring gauge + reset countdown |
 | **Weekly (7d)** | Limit (live) | same endpoint | big % + ring gauge + reset countdown |
 | **Carousel (5h ↔ 7d)** | Limit (live) | same endpoint | one key alternating both windows: big %, progress bar, reset countdown, page dots — auto-rotates on a timer and/or switches on key press |
+| **Model weekly (7d)** | Limit (live) | same endpoint (`limits[]`, `weekly_scoped`) | the per-model weekly cap some plans report; `--` on plans without one |
+| **Burn rate** | Limit (live) | same endpoint, measured across polls | `%/h` on the 5h window + `full ~2h 10m` projection; `--` while idle |
 | **Tokens** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `1.2M`) + `today` / `7 days` / `session` |
 | **Cost** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `$8.40`) + `today` / `7 days` / `session` |
+| **Tokens / Cost — 7-day chart** | Local logs + history | daily totals persisted in `~/.claude-usage/` (survive Claude Code pruning old transcripts) | today's value + a 7-bar week sparkline |
 
-Live limits are color-coded green → amber → red. Updates run every 60s, and
-**tapping any key forces a refresh now**.
+Live limits are color-coded green → amber → red, and a key **flashes once**
+when a limit climbs past the Red threshold (re-armed when the window resets;
+toggle per key). Updates run every 60s, and **tapping any key forces a refresh
+now**.
+
+On a **Stream Deck +**, the separate **Usage Dial** action puts a metric on the
+touch strip: turn the dial to cycle metrics, press it (or tap the strip) to
+force a refresh.
+
+Every poll also writes `~/.claude-usage/stats.json` — all profiles' live
+limits, token/cost totals and burn rate in one machine-readable file, for OBS
+overlays and scripts.
 
 ## Requirements
 

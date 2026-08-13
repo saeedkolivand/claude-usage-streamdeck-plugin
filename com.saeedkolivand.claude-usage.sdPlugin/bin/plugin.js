@@ -2315,7 +2315,7 @@ var require_websocket = __commonJS({
     var http = require("http");
     var net = require("net");
     var tls = require("tls");
-    var { randomBytes, createHash } = require("crypto");
+    var { randomBytes, createHash: createHash2 } = require("crypto");
     var { Duplex, Readable } = require("stream");
     var { URL: URL2 } = require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -2983,7 +2983,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest = createHash("sha1").update(key + GUID).digest("base64");
+        const digest = createHash2("sha1").update(key + GUID).digest("base64");
         if (res.headers["sec-websocket-accept"] !== digest) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -3352,7 +3352,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter2 = require("events");
     var http = require("http");
     var { Duplex } = require("stream");
-    var { createHash } = require("crypto");
+    var { createHash: createHash2 } = require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -3659,7 +3659,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest = createHash("sha1").update(key + GUID).digest("base64");
+        const digest = createHash2("sha1").update(key + GUID).digest("base64");
         const headers = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -4863,12 +4863,12 @@ var NEVER = Object.freeze({
 // @__NO_SIDE_EFFECTS__
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
-    var _a2;
+    var _a3;
     Object.defineProperty(inst, "_zod", {
       value: inst._zod ?? {},
       enumerable: false
     });
-    (_a2 = inst._zod).traits ?? (_a2.traits = /* @__PURE__ */ new Set());
+    (_a3 = inst._zod).traits ?? (_a3.traits = /* @__PURE__ */ new Set());
     inst._zod.traits.add(name);
     initializer2(inst, def);
     for (const k in _.prototype) {
@@ -4883,10 +4883,10 @@ function $constructor(name, initializer2, params) {
   }
   Object.defineProperty(Definition, "name", { value: name });
   function _(def) {
-    var _a2;
+    var _a3;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
+    (_a3 = inst._zod).deferred ?? (_a3.deferred = []);
     for (const fn of inst._zod.deferred) {
       fn();
     }
@@ -5377,8 +5377,8 @@ function aborted(x, startIndex = 0) {
 }
 function prefixIssues(path5, issues) {
   return issues.map((iss) => {
-    var _a2;
-    (_a2 = iss).path ?? (_a2.path = []);
+    var _a3;
+    (_a3 = iss).path ?? (_a3.path = []);
     iss.path.unshift(path5);
     return iss;
   });
@@ -5517,7 +5517,7 @@ function treeifyError(error40, _mapper) {
   };
   const result = { errors: [] };
   const processError = (error41, path5 = []) => {
-    var _a2, _b;
+    var _a3, _b;
     for (const issue2 of error41.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, issue2.path));
@@ -5538,7 +5538,7 @@ function treeifyError(error40, _mapper) {
           const terminal = i === fullpath.length - 1;
           if (typeof el === "string") {
             curr.properties ?? (curr.properties = {});
-            (_a2 = curr.properties)[el] ?? (_a2[el] = { errors: [] });
+            (_a3 = curr.properties)[el] ?? (_a3[el] = { errors: [] });
             curr = curr.properties[el];
           } else {
             curr.items ?? (curr.items = []);
@@ -5751,10 +5751,10 @@ var uppercase = /^[^a-z]*$/;
 
 // node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a2;
+  var _a3;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a2 = inst._zod).onattach ?? (_a2.onattach = []);
+  (_a3 = inst._zod).onattach ?? (_a3.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -5820,8 +5820,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a2;
-    (_a2 = inst2._zod.bag).multipleOf ?? (_a2.multipleOf = def.value);
+    var _a3;
+    (_a3 = inst2._zod.bag).multipleOf ?? (_a3.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -5947,9 +5947,9 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
   };
 });
 var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, def) => {
-  var _a2;
+  var _a3;
   $ZodCheck.init(inst, def);
-  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
+  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -5974,9 +5974,9 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   };
 });
 var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, def) => {
-  var _a2;
+  var _a3;
   $ZodCheck.init(inst, def);
-  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
+  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -6001,9 +6001,9 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   };
 });
 var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (inst, def) => {
-  var _a2;
+  var _a3;
   $ZodCheck.init(inst, def);
-  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
+  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -6031,9 +6031,9 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a2;
+  var _a3;
   $ZodCheck.init(inst, def);
-  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
+  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6060,9 +6060,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a2;
+  var _a3;
   $ZodCheck.init(inst, def);
-  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
+  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6089,9 +6089,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a2;
+  var _a3;
   $ZodCheck.init(inst, def);
-  (_a2 = inst._zod.def).when ?? (_a2.when = (payload) => {
+  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6120,7 +6120,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a2, _b;
+  var _a3, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -6131,7 +6131,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a2 = inst._zod).check ?? (_a2.check = (payload) => {
+    (_a3 = inst._zod).check ?? (_a3.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -6332,7 +6332,7 @@ var version = {
 
 // node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a2;
+  var _a3;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -6347,7 +6347,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a2 = inst._zod).deferred ?? (_a2.deferred = []);
+    (_a3 = inst._zod).deferred ?? (_a3.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -13713,7 +13713,7 @@ var JSONSchemaGenerator = class {
     this.seen = /* @__PURE__ */ new Map();
   }
   process(schema, _params = { path: [], schemaPath: [] }) {
-    var _a2;
+    var _a3;
     const def = schema._zod.def;
     const formatMap = {
       guid: "uuid",
@@ -14175,7 +14175,7 @@ var JSONSchemaGenerator = class {
       delete result.schema.default;
     }
     if (this.io === "input" && result.schema._prefault)
-      (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
+      (_a3 = result.schema).default ?? (_a3.default = result.schema._prefault);
     delete result.schema._prefault;
     const _result = this.seen.get(schema);
     return _result.schema;
@@ -17305,6 +17305,7 @@ var plugin_default = streamDeck;
 
 // src/usage-core.ts
 var import_node_fs4 = require("node:fs");
+var import_node_crypto3 = require("node:crypto");
 var import_promises2 = require("node:fs/promises");
 var import_node_child_process = require("node:child_process");
 var import_node_os = require("node:os");
@@ -17566,6 +17567,7 @@ async function fetchUsage(ua, force = false, profile) {
     cache.at = now;
     cache.data = data;
     failures.delete(key);
+    recordBurnSample(key, data.five_hour?.utilization, now);
     return { data };
   } catch {
     return failResult(key, "network");
@@ -17777,6 +17779,8 @@ async function getLogStats(force = false, configDir) {
   const seenToday = /* @__PURE__ */ new Set();
   const seenWeek = /* @__PURE__ */ new Set();
   const seenSession = /* @__PURE__ */ new Set();
+  const seenDay = /* @__PURE__ */ new Set();
+  const perDay = {};
   for (const f of files) {
     if (f.mtime < startOfWeekMs && f.path !== sessionPath) continue;
     let text;
@@ -17800,6 +17804,16 @@ async function getLogStats(force = false, configDir) {
       const tokens = num(u.input_tokens, 0) + num(u.output_tokens, 0) + num(u.cache_creation_input_tokens, 0) + num(u.cache_read_input_tokens, 0);
       const cost = typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model);
       const ts = e.timestamp ? Date.parse(e.timestamp) : NaN;
+      if (!Number.isNaN(ts)) {
+        const day = dayKey(ts);
+        const kd = "d:" + day + ":" + key2;
+        if (!key2 || !seenDay.has(kd)) {
+          if (key2) seenDay.add(kd);
+          const d = perDay[day] ??= { tokens: 0, cost: 0 };
+          d.tokens += tokens;
+          d.cost += cost;
+        }
+      }
       const isToday = !Number.isNaN(ts) && new Date(ts).toDateString() === todayStr;
       if (isToday) {
         const k = "t:" + key2;
@@ -17828,6 +17842,7 @@ async function getLogStats(force = false, configDir) {
       }
     }
   }
+  writeHistory(key, mergeHistory(readHistory(key), perDay, dayKey(startOfWeekMs)));
   logCaches.set(key, { at: now, data: out });
   return out;
 }
@@ -17842,6 +17857,119 @@ function fmtCost(n) {
   if (n >= 100) return "$" + n.toFixed(0);
   if (n >= 10) return "$" + n.toFixed(1);
   return "$" + n.toFixed(2);
+}
+var burnSamples = /* @__PURE__ */ new Map();
+var BURN_WINDOW_MS = 30 * 6e4;
+var BURN_MIN_GAP_MS = 12e4;
+function recordBurnSample(key, pct, now = Date.now()) {
+  if (typeof pct !== "number") return;
+  let s = burnSamples.get(key);
+  if (!s) burnSamples.set(key, s = []);
+  const last = s[s.length - 1];
+  if (last && pct < last.pct) s.length = 0;
+  s.push({ at: now, pct });
+  while (s.length && now - s[0].at > BURN_WINDOW_MS) s.shift();
+}
+function burnRate(key, now = Date.now()) {
+  const s = burnSamples.get(key) ?? [];
+  const last = s[s.length - 1];
+  const prev = s[s.length - 2];
+  if (!last || !prev || last.pct <= prev.pct) return null;
+  const oldest = s.find((x) => now - x.at >= BURN_MIN_GAP_MS);
+  if (!oldest) return null;
+  const delta = last.pct - oldest.pct;
+  const elapsedH = (last.at - oldest.at) / 36e5;
+  if (delta <= 0 || elapsedH <= 0) return null;
+  const rate = delta / elapsedH;
+  return rate < 1 ? null : Math.round(rate);
+}
+function burnNote(pct, rate) {
+  if (pct == null || rate == null || rate <= 0 || pct >= 100) return "";
+  const mins = Math.round((100 - pct) / rate * 60);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return "full ~" + (h > 0 ? `${h}h ${m}m` : `${m}m`);
+}
+var HISTORY_CAP_DAYS = 400;
+function dataDir(home = (0, import_node_os.homedir)()) {
+  return (0, import_node_path6.join)(home, ".claude-usage");
+}
+function historyPath(configDir) {
+  const h = (0, import_node_crypto3.createHash)("sha256").update(configDir).digest("hex").slice(0, 8);
+  return (0, import_node_path6.join)(dataDir(), `history-${h}.json`);
+}
+function readHistory(configDir) {
+  try {
+    const j = JSON.parse((0, import_node_fs4.readFileSync)(historyPath(configDir), "utf8"));
+    return j && typeof j === "object" ? j : {};
+  } catch {
+    return {};
+  }
+}
+function mergeHistory(existing, fresh, windowStartDay) {
+  const out = { ...existing };
+  for (const [day, v] of Object.entries(fresh)) {
+    const old = out[day];
+    out[day] = day >= windowStartDay || !old ? v : { tokens: Math.max(old.tokens, v.tokens), cost: Math.max(old.cost, v.cost) };
+  }
+  const days = Object.keys(out).sort();
+  while (days.length > HISTORY_CAP_DAYS) delete out[days.shift()];
+  return out;
+}
+function writeHistory(configDir, days) {
+  try {
+    (0, import_node_fs4.mkdirSync)(dataDir(), { recursive: true });
+    (0, import_node_fs4.writeFileSync)(historyPath(configDir), JSON.stringify(days));
+  } catch {
+  }
+}
+function dayKey(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function lastDays(history, n, now = Date.now()) {
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    out.push(history[dayKey(now - i * 864e5)] ?? { tokens: 0, cost: 0 });
+  }
+  return out;
+}
+function writeStatsExport(entries) {
+  try {
+    (0, import_node_fs4.mkdirSync)(dataDir(), { recursive: true });
+    (0, import_node_fs4.writeFileSync)(
+      (0, import_node_path6.join)(dataDir(), "stats.json"),
+      JSON.stringify({ generatedAt: (/* @__PURE__ */ new Date()).toISOString(), profiles: entries }, null, 2)
+    );
+  } catch {
+  }
+}
+function svgSpark(opts) {
+  const size = 144;
+  const cx = 72;
+  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const n = Math.max(1, opts.bars.length);
+  const max = Math.max(...opts.bars, 1);
+  const areaW = 108;
+  const areaH = 30;
+  const baseY = 116;
+  const gap = 4;
+  const barW = (areaW - gap * (n - 1)) / n;
+  const x0 = cx - areaW / 2;
+  const bars = opts.bars.map((v, i) => {
+    const h = Math.max(2, Math.round(v / max * areaH));
+    const x = (x0 + i * (barW + gap)).toFixed(1);
+    const fill = i === n - 1 ? opts.accent : "#4b5563";
+    return `<rect x="${x}" y="${baseY - h}" width="${barW.toFixed(1)}" height="${h}" rx="1.5" fill="${fill}"/>`;
+  }).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" fill="#1f2937"/>
+  <text x="${cx}" y="26" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="600" fill="${opts.accent}">${esc2(opts.label)}</text>
+  <text x="${cx}" y="70" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#f9fafb">${esc2(opts.value)}</text>
+  ${bars}
+  <text x="${cx}" y="136" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="${noteFill}">${esc2(opts.sub)}</text>
+</svg>`;
 }
 function iconMarkup(icon, x, y, sizePx, stroke) {
   const s = sizePx / 16;
@@ -17981,10 +18109,116 @@ function profileFor(s) {
   return resolveProfile(s.profile, extra ? [extra] : []);
 }
 async function draw(act, s) {
+  if (typeof act.setFeedback === "function") return drawDial(act, s);
   const metric = s.metric || "session";
   if (metric === "carousel") return drawCarousel(act, s);
+  if (metric === "burn") return drawBurn(act, s);
+  if (metric.startsWith("hist_")) return drawHist(act, s, metric);
   if (LOG_METRICS.has(metric)) return drawStat(act, s, metric);
   return drawGauge(act, s, metric);
+}
+var alerted = /* @__PURE__ */ new Map();
+function maybeAlert(act, s, metricKey, pct, crit) {
+  if (String(s.alertFlash) === "false") return;
+  const k = act.id + ":" + metricKey;
+  const above = pct != null && pct >= crit;
+  if (above && !alerted.get(k)) act.showAlert?.()?.catch?.(() => {
+  });
+  alerted.set(k, above);
+}
+async function drawBurn(act, s) {
+  const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
+  const p = profileFor(s);
+  const { data, stale } = await fetchUsage(ua, false, p ?? void 0);
+  const key = p?.configDir ?? defaultConfigDir();
+  const pct = data ? pickMetric(data, "session").pct : null;
+  const rate = burnRate(key);
+  const title = (s.title || "").trim();
+  const value = rate == null ? "--" : `${rate}%/h`;
+  const sub = (s.subtitle || "").trim() || burnNote(pct, rate) || "5h window";
+  await act.setImage(
+    toDataUri(svgStat({ label: title || "Burn", value, sub, accent: ACCENT, stale: !!stale }))
+  );
+}
+async function drawHist(act, s, metric) {
+  const p = profileFor(s);
+  const dir = p?.configDir ?? defaultConfigDir();
+  await getLogStats(false, dir);
+  const days = lastDays(readHistory(dir), 7);
+  const cost = metric === "hist_cost";
+  const bars = days.map((d) => cost ? d.cost : d.tokens);
+  const today = days[days.length - 1];
+  const title = (s.title || "").trim();
+  await act.setImage(
+    toDataUri(
+      svgSpark({
+        label: title || (cost ? "Cost" : "Tokens"),
+        value: cost ? fmtCost(today.cost) : fmtTokens(today.tokens),
+        sub: (s.subtitle || "").trim() || "7 days",
+        bars,
+        accent: ACCENT,
+        stale: false
+      })
+    )
+  );
+}
+function statValue(stats, metric) {
+  switch (metric) {
+    case "cost_today":
+      return { label: "Cost", value: fmtCost(stats.todayCost), sub: "today" };
+    case "tokens_week":
+      return { label: "Tokens", value: fmtTokens(stats.weekTokens), sub: "7 days" };
+    case "cost_week":
+      return { label: "Cost", value: fmtCost(stats.weekCost), sub: "7 days" };
+    case "tokens_session":
+      return { label: "Tokens", value: fmtTokens(stats.sessionTokens), sub: "session" };
+    case "cost_session":
+      return { label: "Cost", value: fmtCost(stats.sessionCost), sub: "session" };
+    default:
+      return { label: "Tokens", value: fmtTokens(stats.todayTokens), sub: "today" };
+  }
+}
+async function drawDial(act, s) {
+  const metric = s.metric === "carousel" ? "session" : s.metric || "session";
+  const p = profileFor(s);
+  const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
+  const dir = p?.configDir ?? defaultConfigDir();
+  if (metric === "burn") {
+    const { data: data2 } = await fetchUsage(ua, false, p ?? void 0);
+    const pct2 = data2 ? pickMetric(data2, "session").pct : null;
+    const rate = burnRate(dir);
+    await act.setFeedback({
+      title: "Burn",
+      value: rate == null ? "--" : `${rate}%/h  ${burnNote(pct2, rate)}`.trim(),
+      indicator: { value: pct2 ?? 0 }
+    });
+    return;
+  }
+  if (LOG_METRICS.has(metric) || metric.startsWith("hist_")) {
+    const stats = await getLogStats(false, dir);
+    const m = statValue(stats, metric.replace("hist_", "") + (metric.startsWith("hist_") ? "_today" : ""));
+    await act.setFeedback({
+      title: m.label,
+      value: stats.ok ? `${m.value}  ${m.sub}` : "no logs",
+      indicator: { opacity: 0 }
+    });
+    return;
+  }
+  const { data, error: error40 } = await fetchUsage(ua, false, p ?? void 0);
+  if (!data) {
+    await act.setFeedback({
+      title: (s.title || "").trim() || "Claude",
+      value: error40 === "network" ? "offline" : "open Claude",
+      indicator: { value: 0 }
+    });
+    return;
+  }
+  const { label, pct, resetsAt } = pickMetric(data, metric);
+  await act.setFeedback({
+    title: (s.title || "").trim() || label,
+    value: pct == null ? "--" : `${Math.round(pct)}%  ${untilText(resetsAt)}`.trim(),
+    indicator: { value: pct ?? 0 }
+  });
 }
 async function drawCarousel(act, s) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
@@ -18017,6 +18251,7 @@ async function drawCarousel(act, s) {
     return;
   }
   const { pct, resetsAt } = pickMetric(data, f.metric);
+  maybeAlert(act, s, f.metric, pct, crit);
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
   await act.setImage(
@@ -18050,6 +18285,7 @@ async function drawGauge(act, s, metric) {
     return;
   }
   const { label, pct, resetsAt } = pickMetric(data, metric);
+  maybeAlert(act, s, metric, pct, crit);
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   await act.setImage(
     toDataUri(svgKey({ label: title || label, pct, note, col: color(pct, warn, crit), stale: !!stale }))
@@ -18119,12 +18355,41 @@ async function refreshAll(force) {
       getLogStats(force, p?.configDir)
     ])
   );
+  try {
+    const entries = [];
+    for (const { p, ua } of profiles.values()) {
+      const dir = p?.configDir ?? defaultConfigDir();
+      const u = await fetchUsage(ua, false, p ?? void 0);
+      const st = await getLogStats(false, dir);
+      entries.push({
+        profile: dir,
+        displayName: p?.displayName,
+        usage: u.data,
+        stats: st.ok ? st : null,
+        burnRatePerHour: burnRate(dir)
+      });
+    }
+    writeStatsExport(entries);
+  } catch {
+  }
   for (const [act, s] of pending) {
     try {
       await draw(act, s);
     } catch {
     }
   }
+}
+function sendProfiles(ev) {
+  if (ev?.payload?.event !== "profiles") return;
+  const items = discoverProfiles().map((p) => ({
+    label: p.plan ? `${p.displayName} (${p.plan})` : p.displayName,
+    value: p.configDir
+  }));
+  plugin_default.ui.current?.sendToPropertyInspector({
+    event: "profiles",
+    // An empty list would leave the dropdown blank with no explanation.
+    items: items.length ? items : [{ label: "No Claude data found", value: "" }]
+  });
 }
 var _UsageMeter_decorators, _init, _a;
 _UsageMeter_decorators = [action({ UUID: "com.saeedkolivand.claude-usage.meter" })];
@@ -18144,20 +18409,8 @@ var UsageMeter = class extends (_a = SingletonAction) {
     syncCarousel(ev.action, ev.payload.settings);
     await draw(ev.action, ev.payload.settings);
   }
-  /** The property inspector is a sandboxed webview with no filesystem access,
-   *  so the profile dropdown can't enumerate config dirs itself. sdpi-components
-   *  asks for its options over this channel (`datasource="profiles"`). */
   onSendToPlugin(ev) {
-    if (ev?.payload?.event !== "profiles") return;
-    const items = discoverProfiles().map((p) => ({
-      label: p.plan ? `${p.displayName} (${p.plan})` : p.displayName,
-      value: p.configDir
-    }));
-    plugin_default.ui.current?.sendToPropertyInspector({
-      event: "profiles",
-      // An empty list would leave the dropdown blank with no explanation.
-      items: items.length ? items : [{ label: "No Claude data found", value: "" }]
-    });
+    sendProfiles(ev);
   }
   async onKeyDown(ev) {
     const s = ev.payload.settings;
@@ -18175,7 +18428,43 @@ var UsageMeter = class extends (_a = SingletonAction) {
 _init = __decoratorStart(_a);
 UsageMeter = __decorateElement(_init, 0, "UsageMeter", _UsageMeter_decorators, UsageMeter);
 __runInitializers(_init, 1, UsageMeter);
+var DIAL_METRICS = ["session", "weekly", "model_weekly", "burn", "tokens_today", "cost_today"];
+var _UsageDial_decorators, _init2, _a2;
+_UsageDial_decorators = [action({ UUID: "com.saeedkolivand.claude-usage.dial" })];
+var UsageDial = class extends (_a2 = SingletonAction) {
+  async onWillAppear(ev) {
+    visible.add(ev.action);
+    await draw(ev.action, ev.payload.settings);
+  }
+  onWillDisappear(ev) {
+    visible.delete(ev.action);
+  }
+  async onDidReceiveSettings(ev) {
+    await draw(ev.action, ev.payload.settings);
+  }
+  onSendToPlugin(ev) {
+    sendProfiles(ev);
+  }
+  async onDialRotate(ev) {
+    const s = ev.payload?.settings ?? {};
+    const cur = Math.max(0, DIAL_METRICS.indexOf(s.metric || "session"));
+    const step = (ev.payload?.ticks ?? 1) > 0 ? 1 : DIAL_METRICS.length - 1;
+    const next = { ...s, metric: DIAL_METRICS[(cur + step) % DIAL_METRICS.length] };
+    await ev.action.setSettings(next);
+    await draw(ev.action, next);
+  }
+  async onDialDown() {
+    await refreshAll(true);
+  }
+  async onTouchTap() {
+    await refreshAll(true);
+  }
+};
+_init2 = __decoratorStart(_a2);
+UsageDial = __decorateElement(_init2, 0, "UsageDial", _UsageDial_decorators, UsageDial);
+__runInitializers(_init2, 1, UsageDial);
 plugin_default.actions.registerAction(new UsageMeter());
+plugin_default.actions.registerAction(new UsageDial());
 plugin_default.connect();
 setTimeout(() => refreshAll(false).catch(() => {
 }), 1500);

@@ -6,7 +6,9 @@ import {
   readdirSync,
   writeFileSync,
   renameSync,
+  mkdirSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
@@ -408,6 +410,7 @@ export async function fetchUsage(
     cache.at = now;
     cache.data = data;
     failures.delete(key);
+    recordBurnSample(key, (data.five_hour as UsageNode | null | undefined)?.utilization, now);
     return { data };
   } catch {
     return failResult(key, "network");
@@ -728,6 +731,8 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
   const seenToday = new Set<string>();
   const seenWeek = new Set<string>();
   const seenSession = new Set<string>();
+  const seenDay = new Set<string>();
+  const perDay: Record<string, DayStat> = {};
 
   for (const f of files) {
     // We need files touched within the last 7 days (covers today + week);
@@ -762,6 +767,16 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
       const cost = typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model);
 
       const ts = e.timestamp ? Date.parse(e.timestamp) : NaN;
+      if (!Number.isNaN(ts)) {
+        const day = dayKey(ts);
+        const kd = "d:" + day + ":" + key;
+        if (!key || !seenDay.has(kd)) {
+          if (key) seenDay.add(kd);
+          const d = (perDay[day] ??= { tokens: 0, cost: 0 });
+          d.tokens += tokens;
+          d.cost += cost;
+        }
+      }
       const isToday = !Number.isNaN(ts) && new Date(ts).toDateString() === todayStr;
       if (isToday) {
         const k = "t:" + key;
@@ -793,6 +808,9 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
     }
   }
 
+  // Persist per-day totals so charts survive Claude Code pruning old logs.
+  writeHistory(key, mergeHistory(readHistory(key), perDay, dayKey(startOfWeekMs)));
+
   logCaches.set(key, { at: now, data: out });
   return out;
 }
@@ -809,6 +827,198 @@ export function fmtCost(n: number): string {
   if (n >= 100) return "$" + n.toFixed(0);
   if (n >= 10) return "$" + n.toFixed(1);
   return "$" + n.toFixed(2);
+}
+
+// ---------------------------------------------------------------------------
+// Burn rate: %/hour on the five-hour window, measured across this process's
+// own readings. ponytail: in memory only — a plugin restart loses the rate for
+// ~2 polls; persisting a number that is meaningless five minutes later isn't
+// worth a file write per minute.
+// ---------------------------------------------------------------------------
+const burnSamples = new Map<string, { at: number; pct: number }[]>();
+const BURN_WINDOW_MS = 30 * 60_000;
+// The shortest gap worth measuring a slope across; below it one large turn
+// reads as an implausible rate.
+const BURN_MIN_GAP_MS = 120_000;
+
+export function recordBurnSample(key: string, pct: unknown, now = Date.now()): void {
+  if (typeof pct !== "number") return;
+  let s = burnSamples.get(key);
+  if (!s) burnSamples.set(key, (s = []));
+  const last = s[s.length - 1];
+  // A falling reading is the window turning over; everything before it
+  // describes a window that no longer exists.
+  if (last && pct < last.pct) s.length = 0;
+  s.push({ at: now, pct });
+  while (s.length && now - s[0].at > BURN_WINDOW_MS) s.shift();
+}
+
+/** Whole %/hour, or null when idle or there's not enough data yet. */
+export function burnRate(key: string, now = Date.now()): number | null {
+  const s = burnSamples.get(key) ?? [];
+  const last = s[s.length - 1];
+  const prev = s[s.length - 2];
+  // Nothing since the last poll means nothing is burning right now — without
+  // this the slope keeps decaying for half an hour after a session ends.
+  if (!last || !prev || last.pct <= prev.pct) return null;
+  const oldest = s.find((x) => now - x.at >= BURN_MIN_GAP_MS);
+  if (!oldest) return null;
+  const delta = last.pct - oldest.pct;
+  const elapsedH = (last.at - oldest.at) / 3_600_000;
+  if (delta <= 0 || elapsedH <= 0) return null;
+  const rate = delta / elapsedH;
+  return rate < 1 ? null : Math.round(rate);
+}
+
+/** "full ~2h 10m" projection from the current pct and rate; "" when unknowable. */
+export function burnNote(pct: number | null, rate: number | null): string {
+  if (pct == null || rate == null || rate <= 0 || pct >= 100) return "";
+  const mins = Math.round(((100 - pct) / rate) * 60);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return "full ~" + (h > 0 ? `${h}h ${m}m` : `${m}m`);
+}
+
+// ---------------------------------------------------------------------------
+// Daily history: per-day token/cost totals persisted outside the transcripts,
+// so charts survive Claude Code pruning old JSONL files. One small JSON per
+// profile in ~/.claude-usage/.
+// ---------------------------------------------------------------------------
+export type DayStat = { tokens: number; cost: number };
+const HISTORY_CAP_DAYS = 400;
+
+export function dataDir(home = homedir()): string {
+  return join(home, ".claude-usage");
+}
+
+function historyPath(configDir: string): string {
+  // Hash keeps one file per profile without leaking the path into a filename.
+  const h = createHash("sha256").update(configDir).digest("hex").slice(0, 8);
+  return join(dataDir(), `history-${h}.json`);
+}
+
+export function readHistory(configDir: string): Record<string, DayStat> {
+  try {
+    const j = JSON.parse(readFileSync(historyPath(configDir), "utf8"));
+    return j && typeof j === "object" ? j : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Merge freshly-scanned days into the stored ones.
+ *  Days inside the scan window are authoritative (the scan saw every file that
+ *  feeds them); older days can only be partial re-reads of one session file,
+ *  so those never shrink a stored total. */
+export function mergeHistory(
+  existing: Record<string, DayStat>,
+  fresh: Record<string, DayStat>,
+  windowStartDay: string,
+): Record<string, DayStat> {
+  const out: Record<string, DayStat> = { ...existing };
+  for (const [day, v] of Object.entries(fresh)) {
+    const old = out[day];
+    out[day] =
+      day >= windowStartDay || !old
+        ? v
+        : { tokens: Math.max(old.tokens, v.tokens), cost: Math.max(old.cost, v.cost) };
+  }
+  const days = Object.keys(out).sort();
+  while (days.length > HISTORY_CAP_DAYS) delete out[days.shift()!];
+  return out;
+}
+
+function writeHistory(configDir: string, days: Record<string, DayStat>): void {
+  try {
+    mkdirSync(dataDir(), { recursive: true });
+    writeFileSync(historyPath(configDir), JSON.stringify(days));
+  } catch {
+    /* history is best-effort */
+  }
+}
+
+export function dayKey(ts: number): string {
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Last `n` days (oldest first, today last) from a history map. */
+export function lastDays(
+  history: Record<string, DayStat>,
+  n: number,
+  now = Date.now(),
+): DayStat[] {
+  const out: DayStat[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    out.push(history[dayKey(now - i * 86400_000)] ?? { tokens: 0, cost: 0 });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// stats.json export: everything the keys know, written once per poll for
+// external consumers (OBS overlays, scripts). Best-effort by design.
+// ---------------------------------------------------------------------------
+export function writeStatsExport(
+  entries: {
+    profile: string;
+    displayName?: string;
+    usage: UsageData | null;
+    stats: LogStats | null;
+    burnRatePerHour: number | null;
+  }[],
+): void {
+  try {
+    mkdirSync(dataDir(), { recursive: true });
+    writeFileSync(
+      join(dataDir(), "stats.json"),
+      JSON.stringify({ generatedAt: new Date().toISOString(), profiles: entries }, null, 2),
+    );
+  } catch {
+    /* export is best-effort */
+  }
+}
+
+// Sparkline stat face: label on top, today's value big, a 7-bar week strip
+// below it, scope note at the bottom. Bars normalize to the busiest day so the
+// strip always uses its full height; zero days keep a 2px floor so the week's
+// shape stays readable.
+export function svgSpark(opts: {
+  label: string;
+  value: string;
+  sub: string;
+  bars: number[];
+  accent: string;
+  stale: boolean;
+}): string {
+  const size = 144;
+  const cx = 72;
+  const noteFill = opts.stale ? "#f59e0b" : "#9ca3af";
+  const n = Math.max(1, opts.bars.length);
+  const max = Math.max(...opts.bars, 1);
+  const areaW = 108;
+  const areaH = 30;
+  const baseY = 116;
+  const gap = 4;
+  const barW = (areaW - gap * (n - 1)) / n;
+  const x0 = cx - areaW / 2;
+  const bars = opts.bars
+    .map((v, i) => {
+      const h = Math.max(2, Math.round((v / max) * areaH));
+      const x = (x0 + i * (barW + gap)).toFixed(1);
+      // Today (last bar) in the accent, the rest dimmed to keep focus.
+      const fill = i === n - 1 ? opts.accent : "#4b5563";
+      return `<rect x="${x}" y="${baseY - h}" width="${barW.toFixed(1)}" height="${h}" rx="1.5" fill="${fill}"/>`;
+    })
+    .join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" fill="#1f2937"/>
+  <text x="${cx}" y="26" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="600" fill="${opts.accent}">${esc(opts.label)}</text>
+  <text x="${cx}" y="70" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#f9fafb">${esc(opts.value)}</text>
+  ${bars}
+  <text x="${cx}" y="136" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="${noteFill}">${esc(opts.sub)}</text>
+</svg>`;
 }
 
 // Big face for the carousel: icon + label on top in the face's signature

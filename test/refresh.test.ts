@@ -13,10 +13,16 @@ import { join } from "node:path";
 import {
   ENDPOINT,
   TOKEN_ENDPOINT,
+  burnNote,
+  burnRate,
   computeCost,
   credentialsPath,
+  dayKey,
   fetchUsage,
+  lastDays,
+  mergeHistory,
   pickMetric,
+  recordBurnSample,
   refreshCredentials,
   type Profile,
 } from "../src/usage-core";
@@ -147,6 +153,36 @@ describe("pricing and metrics", () => {
       computeCost({ cache_creation_input_tokens: 1000 }, "claude-sonnet-5"),
       1000 * (3.75 / 1e6),
     );
+  });
+
+  test("burn rate needs a rising window and a real gap", () => {
+    const k = "burn-test";
+    const t0 = 1_000_000_000;
+    recordBurnSample(k, 10, t0);
+    assert.equal(burnRate(k, t0), null); // one sample is no slope
+    recordBurnSample(k, 14, t0 + 180_000);
+    assert.equal(burnRate(k, t0 + 180_000), 80); // 4 points over 3 min
+    recordBurnSample(k, 14, t0 + 240_000);
+    assert.equal(burnRate(k, t0 + 240_000), null); // flat since last poll = idle
+    recordBurnSample(k, 2, t0 + 300_000); // window turned over — history resets
+    recordBurnSample(k, 3, t0 + 360_000);
+    assert.equal(burnRate(k, t0 + 360_000), null); // gap after reset still too short
+    assert.equal(burnNote(50, 25), "full ~2h 0m");
+    assert.equal(burnNote(null, 25), "");
+  });
+
+  test("history merge: window days overwrite, older days never shrink", () => {
+    const merged = mergeHistory(
+      { "2026-08-01": { tokens: 100, cost: 1 }, "2026-08-10": { tokens: 50, cost: 0.5 } },
+      { "2026-08-01": { tokens: 5, cost: 0.1 }, "2026-08-10": { tokens: 80, cost: 0.9 } },
+      "2026-08-06",
+    );
+    assert.deepEqual(merged["2026-08-01"], { tokens: 100, cost: 1 }); // partial re-read ignored
+    assert.deepEqual(merged["2026-08-10"], { tokens: 80, cost: 0.9 }); // in-window is authoritative
+    const days = lastDays({ [dayKey(Date.now())]: { tokens: 7, cost: 0.2 } }, 3);
+    assert.equal(days.length, 3);
+    assert.deepEqual(days[2], { tokens: 7, cost: 0.2 }); // today last
+    assert.deepEqual(days[0], { tokens: 0, cost: 0 }); // missing days are zero
   });
 
   test("model_weekly reads the weekly_scoped limit", () => {

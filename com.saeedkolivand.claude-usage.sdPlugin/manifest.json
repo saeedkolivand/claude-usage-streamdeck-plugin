@@ -44,6 +44,29 @@
           "TitleAlignment": "bottom"
         }
       ]
+    },
+    {
+      "Name": "Usage Dial",
+      "UUID": "com.saeedkolivand.claude-usage.dial",
+      "Icon": "imgs/actions/meter/icon",
+      "Tooltip": "Stream Deck + dial: the touch strip shows a metric, turning cycles metrics, pressing forces a refresh.",
+      "PropertyInspectorPath": "ui/inspector.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "Encoder": {
+        "layout": "$B1",
+        "TriggerDescription": {
+          "Rotate": "Switch metric",
+          "Push": "Force refresh",
+          "Touch": "Force refresh"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/meter/key"
+        }
+      ]
     }
   ]
 }

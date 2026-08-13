@@ -57,6 +57,7 @@
           <option value="session">Session (5h)</option>
           <option value="weekly">Weekly (7d)</option>
           <option value="model_weekly">Model weekly (7d)</option>
+          <option value="burn">Burn rate (%/h)</option>
         </optgroup>
         <optgroup label="Local logs — tokens &amp; cost">
           <option value="tokens_today">Tokens — today</option>
@@ -65,6 +66,8 @@
           <option value="cost_week">Cost — week (7d)</option>
           <option value="tokens_session">Tokens — session</option>
           <option value="cost_session">Cost — session</option>
+          <option value="hist_tokens">Tokens — 7-day chart</option>
+          <option value="hist_cost">Cost — 7-day chart</option>
         </optgroup>
       </sdpi-select>
     </sdpi-item>
@@ -136,9 +139,14 @@
       <sdpi-item label="Red at">
         <sdpi-range setting="crit" min="0" max="100" step="5" default="80" showlabels></sdpi-range>
       </sdpi-item>
+      <sdpi-item label="Alert">
+        <sdpi-checkbox setting="alertFlash" default="true" label="Flash the key when Red is crossed"></sdpi-checkbox>
+      </sdpi-item>
       <sdpi-item label="">
         <small class="hint">
           Thresholds color the live limit metrics (Session / Weekly / Carousel).
+          The alert flash fires once when a limit climbs past Red and re-arms
+          after the window resets.
         </small>
       </sdpi-item>
 
@@ -178,7 +186,8 @@
         const groups = {
           "group-carousel": (m) => m === "carousel",
           "group-title": (m) => m !== "carousel",
-          "group-subtitle": (m) => m.startsWith("tokens_") || m.startsWith("cost_"),
+          "group-subtitle": (m) =>
+            m.startsWith("tokens_") || m.startsWith("cost_") || m.startsWith("hist_") || m === "burn",
           "group-thresholds": (m) => m === "carousel" || m === "session" || m === "weekly" || m === "model_weekly",
         };
         const applyVisibility = () => {
