@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { svgKey, svgStat, svgBig, color } from "../src/usage-core";
+import { svgKey, svgStat, svgBig, svgSpark, color } from "../src/usage-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, "..", "docs", "gallery");
@@ -34,6 +34,9 @@ const VARIANTS: { slug: string; svg: string }[] = [
 	{ slug: "tokens-today", svg: svgStat({ label: "Tokens", value: "1.2M", sub: "today", accent: ACCENT, stale: false }) },
 	{ slug: "cost-7d", svg: svgStat({ label: "Cost", value: "$8.40", sub: "7 days", accent: ACCENT, stale: false }) },
 	{ slug: "tokens-session", svg: svgStat({ label: "Tokens", value: "318K", sub: "session", accent: ACCENT, stale: false }) },
+	{ slug: "model-weekly", svg: svgKey({ label: "Fable", pct: 60, note: "3d 22h", col: color(60, WARN, CRIT), stale: false }) },
+	{ slug: "burn", svg: svgStat({ label: "Burn", value: "12%/h", sub: "full ~3h 40m", accent: ACCENT, stale: false }) },
+	{ slug: "tokens-7d-chart", svg: svgSpark({ label: "Tokens", value: "1.2M", sub: "7 days", bars: [420_000, 810_000, 260_000, 0, 1_400_000, 950_000, 1_200_000], accent: ACCENT, stale: false }) },
 ];
 
 const KEY = 144; // native key size
