@@ -249,22 +249,29 @@ async function refreshAll(force: boolean): Promise<void> {
   // every visible key from cache. Four keys on one account still make one call;
   // two accounts make two.
   const pending: [any, Settings][] = [];
-  const profiles = new Map<string, Profile | null>();
+  const profiles = new Map<string, { p: Profile | null; ua: string }>();
 
   for (const act of visible) {
     try {
       const s = (await act.getSettings()) as Settings;
       pending.push([act, s]);
       const p = profileFor(s);
-      profiles.set(p?.configDir ?? "", p);
+      const key = p?.configDir ?? "";
+      // Poll with the profile's custom User-Agent (first key that sets one
+      // wins). Priming the cache with DEFAULT_UA here would mean a per-key UA
+      // never reaches the network — the draw path always hits this cache.
+      const ua = (s.userAgent || "").trim();
+      const cur = profiles.get(key);
+      if (!cur) profiles.set(key, { p, ua: ua || DEFAULT_UA });
+      else if (cur.ua === DEFAULT_UA && ua) cur.ua = ua;
     } catch {
       /* ignore a single bad key */
     }
   }
 
   await Promise.allSettled(
-    [...profiles.values()].flatMap((p) => [
-      fetchUsage(DEFAULT_UA, force, p ?? undefined),
+    [...profiles.values()].flatMap(({ p, ua }) => [
+      fetchUsage(ua, force, p ?? undefined),
       getLogStats(force, p?.configDir),
     ]),
   );

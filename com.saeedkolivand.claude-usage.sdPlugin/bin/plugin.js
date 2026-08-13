@@ -17576,6 +17576,16 @@ var METRICS = {
   weekly: { label: "Weekly", key: "seven_day" }
 };
 function pickMetric(data, metric) {
+  if (metric === "model_weekly") {
+    const limits = Array.isArray(data?.limits) ? data.limits : [];
+    const l = limits.find((x) => x?.kind === "weekly_scoped" && typeof x?.percent === "number");
+    if (!l) return { label: "Model", pct: null, resetsAt: null };
+    return {
+      label: l.scope?.model?.display_name || "Model",
+      pct: l.percent,
+      resetsAt: l.resets_at ?? null
+    };
+  }
   const m = METRICS[metric] || METRICS.session;
   const node = data ? data[m.key] : null;
   if (!node || typeof node.utilization !== "number") {
@@ -17670,10 +17680,10 @@ function toDataUri(svg) {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 }
 var PRICING = {
-  opus: { in: 5 / 1e6, out: 25 / 1e6, cr: 0.5 / 1e6, cw: 6.25 / 1e6 },
-  opusLegacy: { in: 15 / 1e6, out: 75 / 1e6, cr: 1.5 / 1e6, cw: 18.75 / 1e6 },
-  sonnet: { in: 3 / 1e6, out: 15 / 1e6, cr: 0.3 / 1e6, cw: 3.75 / 1e6 },
-  haiku: { in: 1 / 1e6, out: 5 / 1e6, cr: 0.1 / 1e6, cw: 1.25 / 1e6 }
+  opus: { in: 5 / 1e6, out: 25 / 1e6, cr: 0.5 / 1e6, cw: 6.25 / 1e6, cw1h: 10 / 1e6 },
+  opusLegacy: { in: 15 / 1e6, out: 75 / 1e6, cr: 1.5 / 1e6, cw: 18.75 / 1e6, cw1h: 30 / 1e6 },
+  sonnet: { in: 3 / 1e6, out: 15 / 1e6, cr: 0.3 / 1e6, cw: 3.75 / 1e6, cw1h: 6 / 1e6 },
+  haiku: { in: 1 / 1e6, out: 5 / 1e6, cr: 0.1 / 1e6, cw: 1.25 / 1e6, cw1h: 2 / 1e6 }
 };
 function modelFamily(model) {
   const m = (model || "").toLowerCase();
@@ -17700,7 +17710,10 @@ function rateFor(model) {
 }
 function computeCost(u, model) {
   const r = rateFor(model);
-  return num(u.input_tokens, 0) * r.in + num(u.output_tokens, 0) * r.out + num(u.cache_read_input_tokens, 0) * r.cr + num(u.cache_creation_input_tokens, 0) * r.cw;
+  const cc = u.cache_creation ?? {};
+  const w1h = num(cc.ephemeral_1h_input_tokens, 0);
+  const w5m = Math.max(0, num(u.cache_creation_input_tokens, 0) - w1h);
+  return num(u.input_tokens, 0) * r.in + num(u.output_tokens, 0) * r.out + num(u.cache_read_input_tokens, 0) * r.cr + w5m * r.cw + w1h * r.cw1h;
 }
 function projectsDir(configDir = defaultConfigDir()) {
   return (0, import_node_path6.join)(configDir, "projects");
@@ -18092,13 +18105,17 @@ async function refreshAll(force) {
       const s = await act.getSettings();
       pending.push([act, s]);
       const p = profileFor(s);
-      profiles.set(p?.configDir ?? "", p);
+      const key = p?.configDir ?? "";
+      const ua = (s.userAgent || "").trim();
+      const cur = profiles.get(key);
+      if (!cur) profiles.set(key, { p, ua: ua || DEFAULT_UA });
+      else if (cur.ua === DEFAULT_UA && ua) cur.ua = ua;
     } catch {
     }
   }
   await Promise.allSettled(
-    [...profiles.values()].flatMap((p) => [
-      fetchUsage(DEFAULT_UA, force, p ?? void 0),
+    [...profiles.values()].flatMap(({ p, ua }) => [
+      fetchUsage(ua, force, p ?? void 0),
       getLogStats(force, p?.configDir)
     ])
   );

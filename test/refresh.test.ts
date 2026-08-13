@@ -13,8 +13,10 @@ import { join } from "node:path";
 import {
   ENDPOINT,
   TOKEN_ENDPOINT,
+  computeCost,
   credentialsPath,
   fetchUsage,
+  pickMetric,
   refreshCredentials,
   type Profile,
 } from "../src/usage-core";
@@ -129,5 +131,41 @@ describe("token refresh", () => {
     const res = await fetchUsage("", true, p);
     assert.equal(res.data?.five_hour?.utilization, 42);
     assert.equal(readCreds(p).accessToken, "at-new");
+  });
+});
+
+describe("pricing and metrics", () => {
+  test("1h cache writes bill at 2x input, 5m at 1.25x", () => {
+    const u = {
+      cache_creation_input_tokens: 1000,
+      cache_creation: { ephemeral_1h_input_tokens: 600, ephemeral_5m_input_tokens: 400 },
+    };
+    const expected = 400 * (3.75 / 1e6) + 600 * (6 / 1e6); // sonnet rates
+    assert.ok(Math.abs(computeCost(u, "claude-sonnet-5") - expected) < 1e-12);
+    // Older entries without the breakdown: the whole total prices at 5m.
+    assert.equal(
+      computeCost({ cache_creation_input_tokens: 1000 }, "claude-sonnet-5"),
+      1000 * (3.75 / 1e6),
+    );
+  });
+
+  test("model_weekly reads the weekly_scoped limit", () => {
+    const data = {
+      limits: [
+        { kind: "weekly_all", percent: 70 },
+        {
+          kind: "weekly_scoped",
+          percent: 60,
+          resets_at: "2026-08-17T16:00:00Z",
+          scope: { model: { display_name: "Fable" } },
+        },
+      ],
+    };
+    assert.deepEqual(pickMetric(data as any, "model_weekly"), {
+      label: "Fable",
+      pct: 60,
+      resetsAt: "2026-08-17T16:00:00Z",
+    });
+    assert.equal(pickMetric({} as any, "model_weekly").pct, null);
   });
 });

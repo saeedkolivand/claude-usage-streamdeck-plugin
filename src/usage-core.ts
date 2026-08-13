@@ -423,6 +423,18 @@ export function pickMetric(
   data: UsageData | null,
   metric: string,
 ): { label: string; pct: number | null; resetsAt: string | null } {
+  // Per-model weekly limit ("weekly_scoped" in the limits[] array) — reported
+  // for the account's primary model on some plans, absent on others.
+  if (metric === "model_weekly") {
+    const limits = Array.isArray(data?.limits) ? (data!.limits as any[]) : [];
+    const l = limits.find((x) => x?.kind === "weekly_scoped" && typeof x?.percent === "number");
+    if (!l) return { label: "Model", pct: null, resetsAt: null };
+    return {
+      label: l.scope?.model?.display_name || "Model",
+      pct: l.percent,
+      resetsAt: l.resets_at ?? null,
+    };
+  }
   const m = METRICS[metric] || METRICS.session;
   const node = data ? (data[m.key] as UsageNode | null | undefined) : null;
   if (!node || typeof node.utilization !== "number") {
@@ -588,11 +600,12 @@ export type LogStats = {
 };
 
 // $ per single token (list price / 1e6). Edit if Anthropic changes pricing.
+// cw = 5-minute cache write (1.25x input), cw1h = 1-hour cache write (2x input).
 const PRICING = {
-  opus: { in: 5 / 1e6, out: 25 / 1e6, cr: 0.5 / 1e6, cw: 6.25 / 1e6 },
-  opusLegacy: { in: 15 / 1e6, out: 75 / 1e6, cr: 1.5 / 1e6, cw: 18.75 / 1e6 },
-  sonnet: { in: 3 / 1e6, out: 15 / 1e6, cr: 0.3 / 1e6, cw: 3.75 / 1e6 },
-  haiku: { in: 1 / 1e6, out: 5 / 1e6, cr: 0.1 / 1e6, cw: 1.25 / 1e6 },
+  opus: { in: 5 / 1e6, out: 25 / 1e6, cr: 0.5 / 1e6, cw: 6.25 / 1e6, cw1h: 10 / 1e6 },
+  opusLegacy: { in: 15 / 1e6, out: 75 / 1e6, cr: 1.5 / 1e6, cw: 18.75 / 1e6, cw1h: 30 / 1e6 },
+  sonnet: { in: 3 / 1e6, out: 15 / 1e6, cr: 0.3 / 1e6, cw: 3.75 / 1e6, cw1h: 6 / 1e6 },
+  haiku: { in: 1 / 1e6, out: 5 / 1e6, cr: 0.1 / 1e6, cw: 1.25 / 1e6, cw1h: 2 / 1e6 },
 };
 
 export type ModelFamily = "opus" | "opus-legacy" | "sonnet" | "haiku" | "unknown";
@@ -628,11 +641,18 @@ export function rateFor(model: string): (typeof PRICING)["opus"] {
 
 export function computeCost(u: Record<string, unknown>, model: string): number {
   const r = rateFor(model);
+  // cache_creation_input_tokens is the total; newer entries break it down in
+  // the nested cache_creation object. 1h writes bill at 2x input, 5m at 1.25x —
+  // without the split, 1h-heavy sessions (the CLI's default cache) read low.
+  const cc = (u.cache_creation ?? {}) as Record<string, unknown>;
+  const w1h = num(cc.ephemeral_1h_input_tokens, 0);
+  const w5m = Math.max(0, num(u.cache_creation_input_tokens, 0) - w1h);
   return (
     num(u.input_tokens, 0) * r.in +
     num(u.output_tokens, 0) * r.out +
     num(u.cache_read_input_tokens, 0) * r.cr +
-    num(u.cache_creation_input_tokens, 0) * r.cw
+    w5m * r.cw +
+    w1h * r.cw1h
   );
 }
 

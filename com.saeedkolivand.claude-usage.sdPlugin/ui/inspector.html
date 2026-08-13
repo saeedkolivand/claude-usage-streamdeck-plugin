@@ -56,6 +56,7 @@
           <option value="carousel">Carousel — 5h &#x2194; Weekly</option>
           <option value="session">Session (5h)</option>
           <option value="weekly">Weekly (7d)</option>
+          <option value="model_weekly">Model weekly (7d)</option>
         </optgroup>
         <optgroup label="Local logs — tokens &amp; cost">
           <option value="tokens_today">Tokens — today</option>
@@ -161,7 +162,8 @@
 
     <sdpi-item label="">
       <small class="hint">
-        Opus/Sonnet limit metrics show <b>--</b> on plans that don't report them.
+        <b>Model weekly</b> is the per-model 7-day limit (e.g. the primary
+        model's own cap) and shows <b>--</b> on plans that don't report one.
         Tokens &amp; cost come from Claude Code's local logs; cost is a best-effort
         estimate (and notional "equivalent API spend" on Pro/Max). Tap a key to
         force a refresh; otherwise it updates every 60s.
@@ -177,7 +179,7 @@
           "group-carousel": (m) => m === "carousel",
           "group-title": (m) => m !== "carousel",
           "group-subtitle": (m) => m.startsWith("tokens_") || m.startsWith("cost_"),
-          "group-thresholds": (m) => m === "carousel" || m === "session" || m === "weekly",
+          "group-thresholds": (m) => m === "carousel" || m === "session" || m === "weekly" || m === "model_weekly",
         };
         const applyVisibility = () => {
           const m = select.value || "session";
