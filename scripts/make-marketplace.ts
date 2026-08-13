@@ -17,7 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 
-import { svgKey, svgStat, svgBig, svgSpark, color } from "../src/usage-core";
+import { svgKey, svgStat, svgBig, svgSpark, svgDial, color } from "../src/usage-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
@@ -160,6 +160,49 @@ await render(
     text(W / 2, 248, "As many keys as you like", 60, 800, "#ffffff"),
     row([...GAUGES, ...CAROUSEL, ...STATS, NEW_FACES[2]], 168, 24, 410, W),
     text(W / 2, 800, "All keys share one cached request · tap any key to refresh", 28, 400, MUTED),
+  ].join("\n")
+);
+
+// The Deck+ touch-strip faces (1.12 redesign), on a strip-shaped bezel.
+const DIALS = [
+  svgDial({ label: "Session", value: "62%", sub: "2h 10m", pct: 62, col: color(62, WARN, CRIT), accent: "#e879f9", icon: "clock", stale: false }),
+  svgDial({ label: "Weekly", value: "84%", sub: "3d 4h", pct: 84, col: color(84, WARN, CRIT), accent: "#38bdf8", icon: "calendar", stale: false }),
+  svgDial({ label: "Burn", value: "1.8M/m", sub: "tokens/min", pct: 33, col: "#fb923c", accent: "#fb923c", icon: "clock", stale: false }),
+  svgDial({ label: "Tokens", value: "1.2B", sub: "today", pct: null, col: ACCENT, accent: ACCENT, bars: [420, 810, 260, 90, 1400, 950, 1200], stale: false }),
+];
+
+/** The four dial faces inside a Deck+-style touch-strip bezel, centered. */
+function strip(yTop: number): string {
+  const scale = 2; // native 200x100 → 400x200
+  const faceW = 200 * scale;
+  const faceH = 100 * scale;
+  const gap = 24;
+  const pad = 20;
+  const innerW = DIALS.length * faceW + (DIALS.length - 1) * gap;
+  const bezelW = innerW + pad * 2;
+  const bezelH = faceH + pad * 2;
+  const bx = (W - bezelW) / 2;
+  const parts = [
+    `<rect x="${bx}" y="${yTop}" width="${bezelW}" height="${bezelH}" rx="28" fill="#000000" stroke="#23262e" stroke-width="2"/>`,
+  ];
+  let x = bx + pad;
+  for (const d of DIALS) {
+    parts.push(place(d, x, yTop + pad, scale));
+    x += faceW + gap;
+  }
+  return parts.join("\n");
+}
+
+// Gallery 6 — the Stream Deck + touch strip.
+await render(
+  "gallery-6.png",
+  W,
+  H,
+  [
+    text(W / 2, 175, "STREAM DECK +", 26, 700, ACCENT, 3),
+    text(W / 2, 248, "The touch strip, redesigned", 60, 800, "#ffffff"),
+    strip(360),
+    text(W / 2, 800, "Rotate to switch metric · press to refresh · colors follow your per-key Appearance settings", 28, 400, MUTED),
   ].join("\n")
 );
 
