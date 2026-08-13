@@ -28,6 +28,7 @@ import {
   svgStat,
   svgBig,
   svgSpark,
+  svgDial,
   burnRate,
   burnNote,
   readHistory,
@@ -171,9 +172,16 @@ async function drawBurn(act: any, s: Settings): Promise<void> {
   const key = p?.configDir ?? defaultConfigDir();
   const pct = data ? pickMetric(data, "session").pct : null;
   const rate = burnRate(key);
+  // The %/h slope needs the API's integer utilization to tick, which takes
+  // minutes; until then show live token velocity from the logs so an active
+  // session never reads as idle.
+  const stats = await getLogStats(false, key);
+  const tpm = stats.ok ? stats.burnTokensPerMin : 0;
   const title = (s.title || "").trim();
-  const value = rate == null ? "--" : `${rate}%/h`;
-  const sub = (s.subtitle || "").trim() || burnNote(pct, rate) || "5h window";
+  const value = rate != null ? `${rate}%/h` : tpm > 0 ? `${fmtTokens(tpm)}/m` : "idle";
+  const sub =
+    (s.subtitle || "").trim() ||
+    (rate != null ? burnNote(pct, rate) || "5h window" : tpm > 0 ? "tokens/min" : "5h window");
   await act.setImage(
     toDataUri(svgStat({ label: title || "Burn", value, sub, accent: ACCENT, stale: !!stale })),
   );
@@ -214,47 +222,86 @@ function statValue(stats: LogStats, metric: string): { label: string; value: str
   }
 }
 
+// Touch-strip identity accents: distinct hue per metric family, matching the
+// carousel's fuchsia/sky pairing; burn takes flame orange, logs the coral.
+const DIAL_ACCENTS: Record<string, string> = {
+  session: "#e879f9",
+  weekly: "#38bdf8",
+  model_weekly: "#818cf8",
+  burn: "#fb923c",
+};
+
 async function drawDial(act: any, s: Settings): Promise<void> {
   const metric = s.metric === "carousel" ? "session" : s.metric || "session";
   const p = profileFor(s);
   const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
   const dir = p?.configDir ?? defaultConfigDir();
+  const title = (s.title || "").trim();
+  const push = (o: Parameters<typeof svgDial>[0]) =>
+    act.setFeedback({ canvas: toDataUri(svgDial(o)) });
 
   if (metric === "burn") {
-    const { data } = await fetchUsage(ua, false, p ?? undefined);
+    const { data, stale } = await fetchUsage(ua, false, p ?? undefined);
     const pct = data ? pickMetric(data, "session").pct : null;
     const rate = burnRate(dir);
-    await act.setFeedback({
-      title: "Burn",
-      value: rate == null ? "--" : `${rate}%/h  ${burnNote(pct, rate)}`.trim(),
-      indicator: { value: pct ?? 0 },
+    const stats = await getLogStats(false, dir);
+    const tpm = stats.ok ? stats.burnTokensPerMin : 0;
+    await push({
+      label: title || "Burn",
+      value: rate != null ? `${rate}%/h` : tpm > 0 ? `${fmtTokens(tpm)}/m` : "idle",
+      sub: rate != null ? burnNote(pct, rate) || "5h window" : tpm > 0 ? "tokens/min" : "5h window",
+      pct,
+      col: DIAL_ACCENTS.burn,
+      accent: DIAL_ACCENTS.burn,
+      icon: "clock",
+      stale: !!stale,
     });
     return;
   }
   if (LOG_METRICS.has(metric) || metric.startsWith("hist_")) {
     const stats = await getLogStats(false, dir);
-    const m = statValue(stats, metric.replace("hist_", "") + (metric.startsWith("hist_") ? "_today" : ""));
-    await act.setFeedback({
-      title: m.label,
-      value: stats.ok ? `${m.value}  ${m.sub}` : "no logs",
-      indicator: { opacity: 0 },
+    const base = metric.startsWith("hist_") ? metric.replace("hist_", "") + "_today" : metric;
+    const m = statValue(stats, base);
+    const cost = base.startsWith("cost");
+    const bars = lastDays(readHistory(dir), 7).map((d) => (cost ? d.cost : d.tokens));
+    await push({
+      label: title || m.label,
+      value: stats.ok ? m.value : "--",
+      sub: stats.ok ? m.sub : "no logs",
+      pct: null,
+      col: ACCENT,
+      accent: ACCENT,
+      bars,
+      stale: false,
     });
     return;
   }
-  const { data, error } = await fetchUsage(ua, false, p ?? undefined);
+  const { data, error, stale } = await fetchUsage(ua, false, p ?? undefined);
+  const accent = DIAL_ACCENTS[metric] ?? DIAL_ACCENTS.session;
+  const icon = metric === "session" ? ("clock" as const) : ("calendar" as const);
   if (!data) {
-    await act.setFeedback({
-      title: (s.title || "").trim() || "Claude",
-      value: error === "network" ? "offline" : "open Claude",
-      indicator: { value: 0 },
+    await push({
+      label: title || "Claude",
+      value: "--",
+      sub: error === "network" ? "offline" : "open Claude",
+      pct: null,
+      col: color(null, 50, 80),
+      accent,
+      icon,
+      stale: true,
     });
     return;
   }
   const { label, pct, resetsAt } = pickMetric(data, metric);
-  await act.setFeedback({
-    title: (s.title || "").trim() || label,
-    value: pct == null ? "--" : `${Math.round(pct)}%  ${untilText(resetsAt)}`.trim(),
-    indicator: { value: pct ?? 0 },
+  await push({
+    label: title || label,
+    value: pct == null ? "--" : `${Math.round(pct)}%`,
+    sub: pct == null ? "n/a here" : untilText(resetsAt),
+    pct,
+    col: color(pct, num(s.warn, 50), num(s.crit, 80)),
+    accent,
+    icon,
+    stale: !!stale,
   });
 }
 

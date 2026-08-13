@@ -27,6 +27,9 @@ import {
   type Profile,
 } from "../src/usage-core";
 
+// Keep burn-sample and history persistence out of the real per-user data dir.
+process.env.CLAUDE_USAGE_DATA_DIR = mkdtempSync(join(tmpdir(), "claude-usage-data-"));
+
 let home: string;
 const realFetch = globalThis.fetch;
 
@@ -163,10 +166,11 @@ describe("pricing and metrics", () => {
     recordBurnSample(k, 14, t0 + 180_000);
     assert.equal(burnRate(k, t0 + 180_000), 80); // 4 points over 3 min
     recordBurnSample(k, 14, t0 + 240_000);
-    assert.equal(burnRate(k, t0 + 240_000), null); // flat since last poll = idle
-    recordBurnSample(k, 2, t0 + 300_000); // window turned over — history resets
-    recordBurnSample(k, 3, t0 + 360_000);
-    assert.equal(burnRate(k, t0 + 360_000), null); // gap after reset still too short
+    assert.equal(burnRate(k, t0 + 240_000), 60); // one flat poll mid-burn still reads
+    assert.equal(burnRate(k, t0 + 600_000), null); // no climb for >5 min = idle
+    recordBurnSample(k, 2, t0 + 660_000); // window turned over — history resets
+    recordBurnSample(k, 3, t0 + 720_000);
+    assert.equal(burnRate(k, t0 + 720_000), null); // gap after reset still too short
     assert.equal(burnNote(50, 25), "full ~2h 0m");
     assert.equal(burnNote(null, 25), "");
   });

@@ -599,6 +599,7 @@ export type LogStats = {
   weekCost: number;
   sessionTokens: number;
   sessionCost: number;
+  burnTokensPerMin: number; // token velocity over the last 30 min, from log timestamps
   ok: boolean; // false when the projects directory can't be read
 };
 
@@ -706,6 +707,7 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
     weekCost: 0,
     sessionTokens: 0,
     sessionCost: 0,
+    burnTokensPerMin: 0,
     ok: true,
   };
 
@@ -732,7 +734,12 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
   const seenWeek = new Set<string>();
   const seenSession = new Set<string>();
   const seenDay = new Set<string>();
+  const seenRecent = new Set<string>();
   const perDay: Record<string, DayStat> = {};
+  // Token velocity window, same idea as ccusage's burn rate: precise and
+  // instant, unlike the API's integer utilization percent.
+  const recentStartMs = now - 30 * 60_000;
+  let recentTokens = 0;
 
   for (const f of files) {
     // We need files touched within the last 7 days (covers today + week);
@@ -787,6 +794,14 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
         }
       }
 
+      if (!Number.isNaN(ts) && ts >= recentStartMs) {
+        const k = "r:" + key;
+        if (!key || !seenRecent.has(k)) {
+          if (key) seenRecent.add(k);
+          recentTokens += tokens;
+        }
+      }
+
       const isThisWeek = !Number.isNaN(ts) && ts >= startOfWeekMs;
       if (isThisWeek) {
         const k = "w:" + key;
@@ -811,6 +826,7 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
   // Persist per-day totals so charts survive Claude Code pruning old logs.
   writeHistory(key, mergeHistory(readHistory(key), perDay, dayKey(startOfWeekMs)));
 
+  out.burnTokensPerMin = Math.round(recentTokens / 30);
   logCaches.set(key, { at: now, data: out });
   return out;
 }
@@ -830,41 +846,76 @@ export function fmtCost(n: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Burn rate: %/hour on the five-hour window, measured across this process's
-// own readings. ponytail: in memory only — a plugin restart loses the rate for
-// ~2 polls; persisting a number that is meaningless five minutes later isn't
-// worth a file write per minute.
+// Burn rate: %/hour on the five-hour window. Utilization is an integer percent
+// that ticks up every few minutes at best, so the samples are persisted in
+// ~/.claude-usage — plugin restarts (updates, Stream Deck restarts) would
+// otherwise reset the measurement right when the user is watching it.
 // ---------------------------------------------------------------------------
 const burnSamples = new Map<string, { at: number; pct: number }[]>();
+
+function burnPath(key: string): string {
+  const h = createHash("sha256").update(key).digest("hex").slice(0, 8);
+  return join(dataDir(), `burn-${h}.json`);
+}
+
+/** In-memory samples for a key, seeded from disk on first touch. */
+function samplesFor(key: string, now: number): { at: number; pct: number }[] {
+  let s = burnSamples.get(key);
+  if (!s) {
+    try {
+      const j = JSON.parse(readFileSync(burnPath(key), "utf8"));
+      s = Array.isArray(j)
+        ? j.filter((x) => typeof x?.at === "number" && typeof x?.pct === "number")
+        : [];
+    } catch {
+      s = [];
+    }
+    while (s.length && now - s[0].at > BURN_WINDOW_MS) s.shift();
+    burnSamples.set(key, s);
+  }
+  return s;
+}
 const BURN_WINDOW_MS = 30 * 60_000;
 // The shortest gap worth measuring a slope across; below it one large turn
 // reads as an implausible rate.
 const BURN_MIN_GAP_MS = 120_000;
+// Utilization is a slow-moving integer, so back-to-back polls are usually
+// flat even mid-burn. Only a stretch this long with no climb means idle.
+const BURN_IDLE_MS = 5 * 60_000;
 
 export function recordBurnSample(key: string, pct: unknown, now = Date.now()): void {
   if (typeof pct !== "number") return;
-  let s = burnSamples.get(key);
-  if (!s) burnSamples.set(key, (s = []));
+  const s = samplesFor(key, now);
   const last = s[s.length - 1];
   // A falling reading is the window turning over; everything before it
   // describes a window that no longer exists.
   if (last && pct < last.pct) s.length = 0;
   s.push({ at: now, pct });
   while (s.length && now - s[0].at > BURN_WINDOW_MS) s.shift();
+  try {
+    mkdirSync(dataDir(), { recursive: true });
+    writeFileSync(burnPath(key), JSON.stringify(s));
+  } catch {
+    /* persistence is best-effort; the in-memory copy still works */
+  }
 }
 
 /** Whole %/hour, or null when idle or there's not enough data yet. */
 export function burnRate(key: string, now = Date.now()): number | null {
-  const s = burnSamples.get(key) ?? [];
+  const s = samplesFor(key, now);
   const last = s[s.length - 1];
-  const prev = s[s.length - 2];
-  // Nothing since the last poll means nothing is burning right now — without
-  // this the slope keeps decaying for half an hour after a session ends.
-  if (!last || !prev || last.pct <= prev.pct) return null;
-  const oldest = s.find((x) => now - x.at >= BURN_MIN_GAP_MS);
-  if (!oldest) return null;
-  const delta = last.pct - oldest.pct;
-  const elapsedH = (last.at - oldest.at) / 3_600_000;
+  const first = s[0];
+  if (!last || last === first) return null;
+  // When did utilization last climb? A single flat poll is normal mid-burn
+  // (the API reports whole percents); only a long flat stretch means the
+  // session went idle — without this the slope keeps decaying for half an
+  // hour after a session ends.
+  let riseAt = 0;
+  for (let i = 1; i < s.length; i++) if (s[i].pct > s[i - 1].pct) riseAt = s[i].at;
+  if (!riseAt || now - riseAt > BURN_IDLE_MS) return null;
+  if (last.at - first.at < BURN_MIN_GAP_MS) return null;
+  const delta = last.pct - first.pct;
+  const elapsedH = (last.at - first.at) / 3_600_000;
   if (delta <= 0 || elapsedH <= 0) return null;
   const rate = delta / elapsedH;
   return rate < 1 ? null : Math.round(rate);
@@ -888,7 +939,8 @@ export type DayStat = { tokens: number; cost: number };
 const HISTORY_CAP_DAYS = 400;
 
 export function dataDir(home = homedir()): string {
-  return join(home, ".claude-usage");
+  // Overridable so tests don't touch the real per-user data.
+  return process.env.CLAUDE_USAGE_DATA_DIR || join(home, ".claude-usage");
 }
 
 function historyPath(configDir: string): string {
@@ -1150,5 +1202,66 @@ export function svgStat(opts: {
   <rect x="${cx - 16}" y="42" width="32" height="3" rx="1.5" fill="${opts.accent}"/>
   <text x="${cx}" y="${valBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
   <text x="${cx}" y="120" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="${noteFill}">${esc(opts.sub)}</text>
+</svg>`;
+}
+
+/** Stream Deck + touch-strip slot (200x100): label + big value on the left, a
+ *  ring gauge or 7-day bars on the right. One drawing owns the whole slot via
+ *  a full-canvas pixmap layout, so the strip shares the keys' design language
+ *  instead of the stock $B1 template. */
+export function svgDial(opts: {
+  label: string;
+  value: string;
+  sub: string;
+  pct: number | null; // ring fill 0-100; ring is hidden when `bars` is set
+  col: string; // ring arc — semantic green/amber/red for the limit metrics
+  accent: string; // metric identity: hairline, tick, icon, bars
+  icon?: FaceIcon;
+  bars?: number[]; // 7-day mini chart replaces the ring (log metrics)
+  stale: boolean;
+}): string {
+  const W = 200;
+  const H = 100;
+  let right = "";
+  if (opts.bars && opts.bars.length) {
+    const n = opts.bars.length;
+    const areaX = 118;
+    const areaW = 72;
+    const baseY = 82;
+    const maxH = 44;
+    const gap = 4;
+    const barW = (areaW - gap * (n - 1)) / n;
+    const max = Math.max(...opts.bars, 1);
+    right = opts.bars
+      .map((v, i) => {
+        const h = Math.max(2, Math.round((v / max) * maxH));
+        const x = areaX + i * (barW + gap);
+        // Today (last bar) carries the full accent; history sits back at 40%.
+        return `<rect x="${x.toFixed(1)}" y="${baseY - h}" width="${barW.toFixed(1)}" height="${h}" rx="2" fill="${opts.accent}" opacity="${i === n - 1 ? 1 : 0.4}"/>`;
+      })
+      .join("\n  ");
+  } else {
+    const cx = 154;
+    const cy = 50;
+    const r = 32;
+    const sw = 8;
+    const circ = 2 * Math.PI * r;
+    const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
+    const dash = (p / 100) * circ;
+    const icon = opts.icon ? iconMarkup(opts.icon, cx - 9, cy - 9, 18, opts.accent) : "";
+    right = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#262626" stroke-width="${sw}"/>
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${opts.col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${(circ - dash).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>
+  ${icon}`;
+  }
+  const len = opts.value.length;
+  const valSize = len <= 4 ? 32 : len <= 6 ? 26 : 21;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <rect width="${W}" height="${H}" fill="#0f0f0f"/>
+  <text x="14" y="25" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="#8b93a3">${esc(opts.label.slice(0, 14).toUpperCase())}</text>
+  <rect x="14" y="31" width="20" height="2.5" rx="1.25" fill="${opts.accent}"/>
+  <text x="14" y="66" font-family="Arial, Helvetica, sans-serif" font-size="${valSize}" font-weight="800" fill="#ffffff">${esc(opts.value)}</text>
+  <text x="14" y="88" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${opts.stale ? "#f59e0b" : "#9ca3af"}">${esc(opts.sub)}</text>
+  ${right}
+  ${opts.stale ? `<circle cx="190" cy="11" r="3.5" fill="#f59e0b"/>` : ""}
 </svg>`;
 }

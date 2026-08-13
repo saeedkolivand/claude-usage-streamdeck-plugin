@@ -55,7 +55,7 @@
         "Encoder"
       ],
       "Encoder": {
-        "layout": "$B1",
+        "layout": "layouts/dial.json",
         "TriggerDescription": {
           "Rotate": "Switch metric",
           "Push": "Force refresh",
