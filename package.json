@@ -7,7 +7,7 @@
   "description": "Stream Deck plugin showing AI coding session/weekly usage (works with Claude Code)",
   "scripts": {
     "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js",
-    "test": "esbuild test/profiles.test.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=test/.profiles.test.mjs && node --test test/.profiles.test.mjs",
+    "test": "esbuild test/profiles.test.ts test/refresh.test.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outdir=test --out-extension:.js=.mjs && node --test test/profiles.test.mjs test/refresh.test.mjs",
     "preview": "esbuild scripts/make-preview.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-preview.mjs && node scripts/.make-preview.mjs",
     "gallery": "esbuild scripts/make-gallery.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-gallery.mjs && node scripts/.make-gallery.mjs",
     "marketplace": "esbuild scripts/make-marketplace.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-marketplace.mjs && node scripts/.make-marketplace.mjs"

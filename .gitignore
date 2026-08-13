@@ -10,8 +10,8 @@ scripts/.make-preview.mjs
 scripts/.make-gallery.mjs
 scripts/.make-marketplace.mjs
 
-# test bundle (re-create with `npm test`)
-test/.profiles.test.mjs
+# test bundles (re-create with `npm test`)
+test/*.test.mjs
 
 # logs / OS cruft
 *.log

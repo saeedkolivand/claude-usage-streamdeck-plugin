@@ -11,7 +11,11 @@ var __typeError = (msg) => {
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __export = (target, all) => {
   for (var name in all)
@@ -349,7 +353,7 @@ var require_permessage_deflate = __commonJS({
       acceptAsServer(offers) {
         const opts = this._options;
         const accepted = offers.find((params) => {
-          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && !params.client_max_window_bits) {
+          if (opts.serverNoContextTakeover === false && params.server_no_context_takeover || params.server_max_window_bits && (opts.serverMaxWindowBits === false || typeof opts.serverMaxWindowBits === "number" && opts.serverMaxWindowBits > params.server_max_window_bits) || typeof opts.clientMaxWindowBits === "number" && (typeof params.client_max_window_bits === "number" ? opts.clientMaxWindowBits > params.client_max_window_bits : !params.client_max_window_bits)) {
             return false;
           }
           return true;
@@ -869,6 +873,7 @@ var require_receiver = __commonJS({
         this._opcode = 0;
         this._totalPayloadLength = 0;
         this._messageLength = 0;
+        this._numFragments = 0;
         this._fragments = [];
         this._errored = false;
         this._loop = false;
@@ -1219,23 +1224,23 @@ var require_receiver = __commonJS({
           this.controlMessage(data, cb);
           return;
         }
+        if (this._maxFragments > 0 && ++this._numFragments > this._maxFragments) {
+          const error40 = this.createError(
+            RangeError,
+            "Too many message fragments",
+            false,
+            1008,
+            "WS_ERR_TOO_MANY_BUFFERED_PARTS"
+          );
+          cb(error40);
+          return;
+        }
         if (this._compressed) {
           this._state = INFLATING;
           this.decompress(data, cb);
           return;
         }
         if (data.length) {
-          if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
-            const error40 = this.createError(
-              RangeError,
-              "Too many message fragments",
-              false,
-              1008,
-              "WS_ERR_TOO_MANY_BUFFERED_PARTS"
-            );
-            cb(error40);
-            return;
-          }
           this._messageLength = this._totalPayloadLength;
           this._fragments.push(data);
         }
@@ -1265,17 +1270,6 @@ var require_receiver = __commonJS({
               cb(error40);
               return;
             }
-            if (this._maxFragments > 0 && this._fragments.length >= this._maxFragments) {
-              const error40 = this.createError(
-                RangeError,
-                "Too many message fragments",
-                false,
-                1008,
-                "WS_ERR_TOO_MANY_BUFFERED_PARTS"
-              );
-              cb(error40);
-              return;
-            }
             this._fragments.push(buf);
           }
           this.dataMessage(cb);
@@ -1298,6 +1292,7 @@ var require_receiver = __commonJS({
         this._totalPayloadLength = 0;
         this._messageLength = 0;
         this._fragmented = 0;
+        this._numFragments = 0;
         this._fragments = [];
         if (this._opcode === 2) {
           let data;
@@ -2798,8 +2793,8 @@ var require_websocket = __commonJS({
         autoPong: true,
         closeTimeout: CLOSE_TIMEOUT,
         protocolVersion: protocolVersions[1],
-        maxBufferedChunks: 1024 * 1024,
-        maxFragments: 128 * 1024,
+        maxBufferedChunks: 256 * 1024,
+        maxFragments: 16 * 1024,
         maxPayload: 100 * 1024 * 1024,
         skipUTF8Validation: false,
         perMessageDeflate: true,
@@ -3386,9 +3381,9 @@ var require_websocket_server = __commonJS({
        *     called
        * @param {Function} [options.handleProtocols] A hook to handle protocols
        * @param {String} [options.host] The hostname where to bind the server
-       * @param {Number} [options.maxBufferedChunks=1048576] The maximum number of
+       * @param {Number} [options.maxBufferedChunks=262144] The maximum number of
        *     buffered data chunks
-       * @param {Number} [options.maxFragments=131072] The maximum number of message
+       * @param {Number} [options.maxFragments=16384] The maximum number of message
        *     fragments
        * @param {Number} [options.maxPayload=104857600] The maximum allowed message
        *     size
@@ -3411,8 +3406,8 @@ var require_websocket_server = __commonJS({
         options = {
           allowSynchronousEvents: true,
           autoPong: true,
-          maxBufferedChunks: 1024 * 1024,
-          maxFragments: 128 * 1024,
+          maxBufferedChunks: 256 * 1024,
+          maxFragments: 16 * 1024,
           maxPayload: 100 * 1024 * 1024,
           skipUTF8Validation: false,
           perMessageDeflate: false,
@@ -15618,12 +15613,15 @@ var FileTarget = class {
     });
   }
   /**
-   * Re-indexes the existing log files associated with this file target, removing old log files whose index exceeds the {@link FileTargetOptions.maxFileCount}, and renaming the
-   * remaining log files, leaving index "0" free for a new log file.
+   * Re-indexes the existing log files associated with this file target, removing old log files whose
+   * index exceeds the `maxFileCount`, and renaming the remaining log files, leaving index "0" free
+   * for a new log file.
    */
   reIndex() {
     if (!import_node_fs.default.existsSync(this.#options.dest)) {
-      import_node_fs.default.mkdirSync(this.#options.dest);
+      import_node_fs.default.mkdirSync(this.#options.dest, {
+        recursive: true
+      });
       return;
     }
     const logFiles = this.getLogFiles();
@@ -17314,6 +17312,11 @@ var import_node_path6 = require("node:path");
 var ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 var DEFAULT_UA = "claude-code/2.0.31";
 var CACHE_TTL_MS = 55e3;
+var TOKEN_ENDPOINT = "https://platform.claude.com/v1/oauth/token";
+var OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
+var REFRESH_COOLDOWN_MS = 5 * 6e4;
+var refreshing = /* @__PURE__ */ new Map();
+var refreshFailedAt = /* @__PURE__ */ new Map();
 var caches = /* @__PURE__ */ new Map();
 function cacheFor(key) {
   let entry = caches.get(key);
@@ -17443,6 +17446,82 @@ function readTokenFromKeychain() {
     return {};
   }
 }
+async function refreshCredentials(profile, force = false, badToken) {
+  const dir = profile?.configDir ?? defaultConfigDir();
+  const inflight = refreshing.get(dir);
+  if (inflight) return inflight;
+  if (!force && Date.now() - (refreshFailedAt.get(dir) ?? 0) < REFRESH_COOLDOWN_MS) {
+    return null;
+  }
+  const job = doRefresh(credentialsPath(dir), badToken).then((r) => {
+    if (r) refreshFailedAt.delete(dir);
+    else refreshFailedAt.set(dir, Date.now());
+    return r;
+  });
+  refreshing.set(dir, job);
+  try {
+    return await job;
+  } finally {
+    refreshing.delete(dir);
+  }
+}
+async function doRefresh(path5, badToken) {
+  let j;
+  try {
+    j = JSON.parse((0, import_node_fs4.readFileSync)(path5, "utf8"));
+  } catch {
+    return null;
+  }
+  const o = j?.claudeAiOauth;
+  if (!o?.refreshToken) return null;
+  const expiresAt = Number(o.expiresAt || 0);
+  if (o.accessToken && o.accessToken !== badToken && !(expiresAt > 0 && Date.now() > expiresAt)) {
+    return { token: o.accessToken, expired: false };
+  }
+  const rtExpiresAt = Number(o.refreshTokenExpiresAt || 0);
+  if (rtExpiresAt > 0 && Date.now() > rtExpiresAt) return null;
+  let body;
+  try {
+    const res = await fetch(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": DEFAULT_UA },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: o.refreshToken,
+        client_id: OAUTH_CLIENT_ID
+      })
+    });
+    if (!res.ok) {
+      const again = readTokenFromFile(path5);
+      return again.token && !again.expired ? again : null;
+    }
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  const token = body?.access_token;
+  if (!token) return null;
+  let fresh = j;
+  try {
+    fresh = JSON.parse((0, import_node_fs4.readFileSync)(path5, "utf8"));
+  } catch {
+  }
+  const target = fresh.claudeAiOauth ||= {};
+  target.accessToken = token;
+  target.refreshToken = body.refresh_token || o.refreshToken;
+  target.expiresAt = Date.now() + num(body.expires_in, 28800) * 1e3;
+  try {
+    const tmp = path5 + ".tmp";
+    (0, import_node_fs4.writeFileSync)(tmp, JSON.stringify(fresh), { mode: 384 });
+    (0, import_node_fs4.renameSync)(tmp, path5);
+  } catch {
+    try {
+      (0, import_node_fs4.writeFileSync)(path5, JSON.stringify(fresh), { mode: 384 });
+    } catch {
+    }
+  }
+  return { token, expired: false };
+}
 async function fetchUsage(ua, force = false, profile) {
   const now = Date.now();
   const key = profile?.configDir ?? defaultConfigDir();
@@ -17458,14 +17537,17 @@ async function fetchUsage(ua, force = false, profile) {
       stale: cache.data != null && now - cache.at > STALE_AFTER_MS
     };
   }
-  const { token, expired } = readToken(profile);
-  if (!token) return failResult(key, "no-token");
-  if (expired) return failResult(key, "token-expired");
+  let cred = readToken(profile);
+  if (!cred.token || cred.expired) {
+    cred = await refreshCredentials(profile, force) ?? cred;
+  }
+  if (!cred.token) return failResult(key, "no-token");
+  if (cred.expired) return failResult(key, "token-expired");
   try {
-    const res = await fetch(ENDPOINT, {
+    const get2 = (t) => fetch(ENDPOINT, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${t}`,
         "anthropic-beta": "oauth-2025-04-20",
         // Required: without a claude-code User-Agent the endpoint serves an
         // aggressively rate-limited bucket and returns persistent 429s.
@@ -17474,6 +17556,11 @@ async function fetchUsage(ua, force = false, profile) {
         Accept: "application/json, text/plain, */*"
       }
     });
+    let res = await get2(cred.token);
+    if (res.status === 401) {
+      const r = await refreshCredentials(profile, force, cred.token);
+      if (r?.token && r.token !== cred.token) res = await get2(r.token);
+    }
     if (!res.ok) return failResult(key, `http-${res.status}`);
     const data = await res.json();
     cache.at = now;

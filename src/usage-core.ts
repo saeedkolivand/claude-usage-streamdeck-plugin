@@ -1,5 +1,12 @@
 // usage-core.ts — data + rendering logic, no Stream Deck SDK dependency.
-import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
+import {
+  readFileSync,
+  existsSync,
+  statSync,
+  readdirSync,
+  writeFileSync,
+  renameSync,
+} from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
@@ -8,6 +15,15 @@ import { dirname, join, resolve } from "node:path";
 export const ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 export const DEFAULT_UA = "claude-code/2.0.31";
 const CACHE_TTL_MS = 55_000;
+
+export const TOKEN_ENDPOINT = "https://platform.claude.com/v1/oauth/token";
+// Claude Code's public OAuth client id (verified as a string in the CLI binary).
+const OAUTH_CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
+// Longer than the 60s poll period on purpose: reusing the 55s fetch cooldown
+// would let every tick POST a known-dead refresh token to the endpoint.
+const REFRESH_COOLDOWN_MS = 5 * 60_000;
+const refreshing = new Map<string, Promise<{ token?: string; expired?: boolean } | null>>();
+const refreshFailedAt = new Map<string, number>();
 
 export type UsageNode = { utilization: number; resets_at: string | null };
 export type UsageData = {
@@ -220,6 +236,121 @@ function readTokenFromKeychain(): { token?: string; expired?: boolean } {
   }
 }
 
+/** Refresh the OAuth token ourselves instead of waiting for Claude Code.
+ *
+ *  Refresh tokens are single-use and rotate: the response carries a new one
+ *  that supersedes ours server-side, so the rotated pair MUST be written back
+ *  to .credentials.json or the CLI's next refresh fails and it gets logged
+ *  out. Keychain-only setups (macOS default profile with no file) are skipped
+ *  for the same reason — there is no file to persist the rotation to.
+ *
+ *  Returns null when refresh can't help; callers keep their readToken result
+ *  so every existing failure render stays as it was. */
+export async function refreshCredentials(
+  profile?: Profile,
+  force = false,
+  badToken?: string,
+): Promise<{ token?: string; expired?: boolean } | null> {
+  const dir = profile?.configDir ?? defaultConfigDir();
+  // One in-flight refresh per profile: two concurrent consumers of a
+  // single-use rotating token would invalidate each other.
+  const inflight = refreshing.get(dir);
+  if (inflight) return inflight;
+  if (!force && Date.now() - (refreshFailedAt.get(dir) ?? 0) < REFRESH_COOLDOWN_MS) {
+    return null;
+  }
+  const job = doRefresh(credentialsPath(dir), badToken).then((r) => {
+    if (r) refreshFailedAt.delete(dir);
+    else refreshFailedAt.set(dir, Date.now());
+    return r;
+  });
+  refreshing.set(dir, job);
+  try {
+    return await job;
+  } finally {
+    refreshing.delete(dir);
+  }
+}
+
+async function doRefresh(
+  path: string,
+  badToken?: string,
+): Promise<{ token?: string; expired?: boolean } | null> {
+  // Read fresh rather than trusting the caller: another process (the CLI)
+  // may have rotated the token since — its rotation supersedes ours, and a
+  // POST with our stale copy is a guaranteed invalid_grant.
+  let j: any;
+  try {
+    j = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+  const o = j?.claudeAiOauth;
+  if (!o?.refreshToken) return null;
+  const expiresAt = Number(o.expiresAt || 0);
+  if (
+    o.accessToken &&
+    o.accessToken !== badToken &&
+    !(expiresAt > 0 && Date.now() > expiresAt)
+  ) {
+    // The CLI already refreshed while we were deciding to — use its token.
+    // badToken is the one the server just 401'd; a file still holding it is
+    // not "already refreshed", however valid its expiresAt claims to be.
+    return { token: o.accessToken, expired: false };
+  }
+  const rtExpiresAt = Number(o.refreshTokenExpiresAt || 0);
+  if (rtExpiresAt > 0 && Date.now() > rtExpiresAt) return null;
+
+  let body: any;
+  try {
+    const res = await fetch(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": DEFAULT_UA },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: o.refreshToken,
+        client_id: OAUTH_CLIENT_ID,
+      }),
+    });
+    if (!res.ok) {
+      // invalid_grant here usually means a concurrent CLI session consumed
+      // the token first and wrote fresh credentials — pick those up instead.
+      const again = readTokenFromFile(path);
+      return again.token && !again.expired ? again : null;
+    }
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  const token: string | undefined = body?.access_token;
+  if (!token) return null;
+
+  // Merge the rotation into a fresh read so fields we don't know about —
+  // and anything the CLI wrote meanwhile — survive the rewrite.
+  let fresh: any = j;
+  try {
+    fresh = JSON.parse(readFileSync(path, "utf8"));
+  } catch {}
+  const target = (fresh.claudeAiOauth ||= {});
+  target.accessToken = token;
+  target.refreshToken = body.refresh_token || o.refreshToken;
+  target.expiresAt = Date.now() + num(body.expires_in, 28800) * 1000;
+  try {
+    const tmp = path + ".tmp";
+    writeFileSync(tmp, JSON.stringify(fresh), { mode: 0o600 });
+    renameSync(tmp, path);
+  } catch {
+    // The rotation is already consumed server-side; persisting non-atomically
+    // beats losing it.
+    try {
+      writeFileSync(path, JSON.stringify(fresh), { mode: 0o600 });
+    } catch {}
+  }
+  // The in-memory token is authoritative even if both writes failed: the old
+  // access token may already be dead and the rotation is spent.
+  return { token, expired: false };
+}
+
 export async function fetchUsage(
   ua: string,
   force = false,
@@ -241,25 +372,37 @@ export async function fetchUsage(
       stale: cache.data != null && now - cache.at > STALE_AFTER_MS,
     };
   }
-  const { token, expired } = readToken(profile);
-  if (!token) return failResult(key, "no-token");
-  // A token the credentials already mark as expired guarantees a 401 — skip
-  // the request and wait for Claude Code to write a refreshed one.
-  if (expired) return failResult(key, "token-expired");
+  let cred = readToken(profile);
+  // An expired or missing access token no longer waits for Claude Code to
+  // write a refreshed one — refresh it ourselves from the rotating
+  // refresh token.
+  if (!cred.token || cred.expired) {
+    cred = (await refreshCredentials(profile, force)) ?? cred;
+  }
+  if (!cred.token) return failResult(key, "no-token");
+  if (cred.expired) return failResult(key, "token-expired");
 
   try {
-    const res = await fetch(ENDPOINT, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "anthropic-beta": "oauth-2025-04-20",
-        // Required: without a claude-code User-Agent the endpoint serves an
-        // aggressively rate-limited bucket and returns persistent 429s.
-        "User-Agent": ua || DEFAULT_UA,
-        "Content-Type": "application/json",
-        Accept: "application/json, text/plain, */*",
-      },
-    });
+    const get = (t: string) =>
+      fetch(ENDPOINT, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${t}`,
+          "anthropic-beta": "oauth-2025-04-20",
+          // Required: without a claude-code User-Agent the endpoint serves an
+          // aggressively rate-limited bucket and returns persistent 429s.
+          "User-Agent": ua || DEFAULT_UA,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/plain, */*",
+        },
+      });
+    let res = await get(cred.token);
+    if (res.status === 401) {
+      // The file said the token was valid but the server disagrees (clock
+      // skew, revocation) — refresh once and retry.
+      const r = await refreshCredentials(profile, force, cred.token);
+      if (r?.token && r.token !== cred.token) res = await get(r.token);
+    }
     if (!res.ok) return failResult(key, `http-${res.status}`);
     const data = (await res.json()) as UsageData;
     cache.at = now;

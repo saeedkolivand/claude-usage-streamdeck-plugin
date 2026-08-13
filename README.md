@@ -179,9 +179,11 @@ curl -s https://api.anthropic.com/api/oauth/usage \
   endpoint serves an aggressively rate-limited bucket (constant 429s). The plugin
   sends `claude-code/2.0.31` by default; if Anthropic ever tightens the check,
   bump the version string in the key's **Advanced → User-Agent** field.
-- **Token refresh.** Claude Code refreshes the token in `.credentials.json`
-  automatically while you use it. If the plugin shows `open Claude`, just launch
-  Claude Code once to refresh, and the keys recover on the next tick.
+- **Token refresh.** The plugin refreshes the OAuth token itself (same flow as
+  the CLI) and writes the rotated token back to `.credentials.json`, so the CLI
+  stays logged in and the keys keep updating even if you haven't opened Claude
+  Code in days. `open Claude` now only means the refresh token itself is
+  dead/expired — launch Claude Code once to log in again.
 - **One network call, not four.** All your Claude Usage keys share a single
   cached fetch per minute, so adding more keys doesn't multiply API calls.
 - **Pro vs Max.** Works on both — Session and Weekly limits report on either plan.
@@ -189,6 +191,9 @@ curl -s https://api.anthropic.com/api/oauth/usage \
   (`security find-generic-password -s "Claude Code-credentials"`), and the
   transcripts from `~/.claude/projects/`. If a key shows `open Claude`, macOS may
   be prompting for Keychain access — approve it (or run Claude Code once).
+  Keychain-only setups aren't auto-refreshed (there's no file to persist the
+  rotated token to safely), so an expired token there still needs a one-off
+  Claude Code launch.
 - **Tokens & cost are best-effort.** They're parsed from Claude Code's local
   JSONL logs, which have two known quirks:
   - Claude Code currently under-records `input`/`output` tokens in the logs
