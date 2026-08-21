@@ -1262,8 +1262,9 @@ export function faceOrder(s: CarouselSettings): Face[] {
     .filter((id) => !seen.has(id) && seen.add(id)) // ignore accidental repeats
     .map((id) => FACES.find((f) => f.id === id))
     .filter((f): f is Face => !!f);
-  // A key with every face switched off would render nothing at all; fall back
-  // to the session face rather than showing a blank key.
+  // Only reachable when every id is unknown — a face removed in a later
+  // version, or a hand-edited setting. Unticking every face in the inspector
+  // stores "" instead, which took the default pairing above.
   return out.length ? out : [FACES[0]];
 }
 

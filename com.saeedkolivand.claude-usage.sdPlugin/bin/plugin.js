@@ -18258,7 +18258,8 @@ function facePalette(f, s) {
   return { accent: f.accent, pctCol: f.pctCol, noteCol: f.noteCol };
 }
 var carousel = /* @__PURE__ */ new Map();
-var MAX_BADGE_BYTES = 2 * 1024 * 1024;
+var MAX_BADGE_BYTES = 256 * 1024;
+var MAX_BADGE_CACHE = 8;
 var badgeCache = /* @__PURE__ */ new Map();
 var MIME = {
   ".png": "image/png",
@@ -18281,6 +18282,7 @@ function badgeImage(path5) {
     const hit = badgeCache.get(file2);
     if (hit?.key === key) return hit.uri;
     const uri = `data:${mime};base64,${(0, import_node_fs5.readFileSync)(file2).toString("base64")}`;
+    if (badgeCache.size >= MAX_BADGE_CACHE) badgeCache.clear();
     badgeCache.set(file2, { key, uri });
     return uri;
   } catch {

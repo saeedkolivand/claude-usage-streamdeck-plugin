@@ -148,7 +148,13 @@ const carousel = new Map<
 // the SVG. Cached by path + mtime + size: the carousel repaints on every
 // rotation and on every refresh tick, and re-reading the file each time would
 // be pure waste — but editing the picture in place still takes effect.
-const MAX_BADGE_BYTES = 2 * 1024 * 1024; // a key is 144px; anything larger is a mistake
+// The whole image is base64'd into the SVG and pushed over the websocket on
+// every repaint, so the cap is sized to the key (144px) rather than to what a
+// disk can hold. 256 KB is a generous PNG at that size.
+const MAX_BADGE_BYTES = 256 * 1024;
+// ponytail: clear-all when full, since a deck rarely has more than a few badge
+// keys. Swap for real LRU eviction if that stops being true.
+const MAX_BADGE_CACHE = 8;
 const badgeCache = new Map<string, { key: string; uri: string }>();
 const MIME: Record<string, string> = {
   ".png": "image/png",
@@ -172,6 +178,7 @@ function badgeImage(path?: string): string | undefined {
     const hit = badgeCache.get(file);
     if (hit?.key === key) return hit.uri;
     const uri = `data:${mime};base64,${readFileSync(file).toString("base64")}`;
+    if (badgeCache.size >= MAX_BADGE_CACHE) badgeCache.clear();
     badgeCache.set(file, { key, uri });
     return uri;
   } catch {

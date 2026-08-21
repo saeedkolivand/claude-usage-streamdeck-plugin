@@ -110,7 +110,7 @@ Select the key, then open its property inspector (panel below the canvas):
 | **Starts on** (Carousel) | Which of those faces the key shows when it loads. With **Auto-rotate** off the key stays on it, so two carousel keys side by side can each hold one window permanently — no second action type needed. |
 | **Auto-rotate & Interval** (Carousel) | Whether the carousel flips between the 5-hour and weekly faces on its own, and every how many seconds (default `10`). Dragging the interval to `0` ("never") also pins the face. Pressing the key always flips immediately. |
 | **5h / Weekly / Model label & color** (Carousel) | Per-face label (defaults `5 HOURS` / `WEEKLY`, and the model's own name for the model face — localize freely) and base color; the % / bar / countdown tints derive from the base color. |
-| **Badge** (Carousel) | A picture-only face: a gauge mark by default, or any image you point **Badge image** at (PNG/JPG/GIF/WebP/SVG, up to 2 MB, fitted whole). **Badge for** sets how long it holds, overriding the carousel interval, and **Badge caption** adds a word under it. |
+| **Badge** (Carousel) | A picture-only face: a gauge mark by default, or any image you point **Badge image** at (PNG/JPG/GIF/WebP/SVG, up to 256 KB, fitted whole). **Badge for** sets how long it holds, overriding the carousel interval, and **Badge caption** adds a word under it. |
 | **Subtitle** (Tokens / Cost) | Overrides the scope line under the value (`today` / `7 days` / `session`) — handy for localization. |
 | **Amber threshold** | % where a live limit metric turns amber (default `50`). |
 | **Red threshold** | % where a live limit metric turns red (default `80`). |
