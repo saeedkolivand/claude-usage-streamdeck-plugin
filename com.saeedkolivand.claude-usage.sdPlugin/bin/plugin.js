@@ -1,3 +1,4 @@
+"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -3745,6 +3746,9 @@ var require_websocket_server = __commonJS({
     }
   }
 });
+
+// src/plugin.ts
+var import_node_fs5 = require("node:fs");
 
 // node_modules/@elgato/utils/dist/i18n/language.js
 var defaultLanguage = "en";
@@ -18009,15 +18013,39 @@ function svgSpark(opts) {
   <text x="${cx}" y="136" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="${noteFill}">${esc2(opts.sub)}</text>
 </svg>`;
 }
+var BADGE_COLOR = "#d97757";
 function iconMarkup(icon, x, y, sizePx, stroke) {
   const s = sizePx / 16;
-  const g = (inner) => `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+  const col = icon === "badge" ? BADGE_COLOR : stroke;
+  const g = (inner, attrs = `fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`) => `<g transform="translate(${x} ${y}) scale(${s})" ${attrs}>${inner}</g>`;
   if (icon === "clock") {
     return g(`<circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/>`);
+  }
+  if (icon === "badge") {
+    const w = sizePx > 40 ? 1.5 : 2;
+    return g(
+      `<path d="M2.74 11.12A5.6 5.6 0 1 1 13.26 11.12"/><path d="M8.0 9.2L10.47 5.68"/><circle cx="8.0" cy="9.2" r="${w * 0.85}" fill="${col}" stroke="none"/>`,
+      `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`
+    );
+  }
+  if (icon === "model") {
+    return g(
+      `<rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/><path d="M6.5 1.5v2M9.5 1.5v2M6.5 12.5v2M9.5 12.5v2M1.5 6.5h2M1.5 9.5h2M12.5 6.5h2M12.5 9.5h2"/>`
+    );
   }
   return g(
     `<rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/>`
   );
+}
+function pageDots(face, faces, accent, cx) {
+  if (!faces || faces <= 1) return "";
+  const gap = 14;
+  const x0 = cx - (faces - 1) * gap / 2;
+  let out = "";
+  for (let i = 0; i < faces; i++) {
+    out += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (face ?? 0) ? accent : "#4b5563"}"/>`;
+  }
+  return out;
 }
 function svgBig(opts) {
   const size = 144;
@@ -18044,14 +18072,7 @@ function svgBig(opts) {
   } else {
     header = `<text x="${cx}" y="26" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${accent}">${esc2(opts.label)}</text>`;
   }
-  let dots = "";
-  if (opts.faces && opts.faces > 1) {
-    const gap = 14;
-    const x0 = cx - (opts.faces - 1) * gap / 2;
-    for (let i = 0; i < opts.faces; i++) {
-      dots += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (opts.face ?? 0) ? accent : "#4b5563"}"/>`;
-    }
-  }
+  const dots = pageDots(opts.face, opts.faces, accent, cx);
   const barX = 22;
   const barW = size - 2 * barX;
   const barY = 92;
@@ -18065,6 +18086,69 @@ function svgBig(opts) {
   <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc2(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${symSize}" font-weight="700">%</tspan>`}</text>
   ${bar}
   <text x="${cx}" y="${opts.faces && opts.faces > 1 ? 129 : 131}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${noteFill}">${esc2(opts.note)}</text>
+  ${dots}
+</svg>`;
+}
+var FACES = [
+  // Fuchsia vs sky vs indigo: far enough apart in hue that the windows never
+  // blur together on the small LCD (violet vs sky proved too close side by side).
+  { id: "session", metric: "session", label: "5 HOURS", accent: "#e879f9", pctCol: "#f0abfc", noteCol: "#f5d0fe", icon: "clock" },
+  // fuchsia family
+  { id: "weekly", metric: "weekly", label: "WEEKLY", accent: "#38bdf8", pctCol: "#7dd3fc", noteCol: "#bae6fd", icon: "calendar" },
+  // sky family
+  { id: "model_weekly", metric: "model_weekly", label: "MODEL", accent: "#818cf8", pctCol: "#a5b4fc", noteCol: "#c7d2fe", icon: "model" },
+  // indigo family
+  { id: "badge", metric: "", label: "BADGE", accent: BADGE_COLOR, pctCol: BADGE_COLOR, noteCol: BADGE_COLOR, icon: "badge" }
+];
+var DEFAULT_FACE_ORDER = ["session", "weekly"];
+function faceOrder(s) {
+  const raw = (s.faceOrder || "").trim();
+  const ids = raw ? raw.split(",").map((t) => t.trim()).filter(Boolean) : DEFAULT_FACE_ORDER;
+  const seen = /* @__PURE__ */ new Set();
+  const out = ids.filter((id) => !seen.has(id) && seen.add(id)).map((id) => FACES.find((f) => f.id === id)).filter((f) => !!f);
+  return out.length ? out : [FACES[0]];
+}
+function startFace(s) {
+  const order = faceOrder(s);
+  const i = order.findIndex((f) => f.id === s.carouselStart);
+  return i < 0 ? 0 : i;
+}
+function faceCount(s) {
+  return faceOrder(s).length;
+}
+function carouselAuto(s) {
+  if (numOr(s.carouselSec, 10) === 0) return false;
+  return String(s.carouselAuto) !== "false";
+}
+function faceSec(s, face) {
+  const f = faceOrder(s)[face];
+  const sec = f?.id === "badge" ? numOr(s.badgeSec, 3) : numOr(s.carouselSec, 10);
+  return Math.min(3600, Math.max(1, sec));
+}
+function numOr(v, d) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+function svgBadge(opts) {
+  const size = 144;
+  const cx = 72;
+  const cap = (opts.label || "").trim();
+  const art = cap ? 74 : 86;
+  const artY = cap ? 26 : Math.round((144 - art) / 2) - 6;
+  const dots = pageDots(opts.face, opts.faces, BADGE_COLOR, cx);
+  const caption = cap ? `<text x="${cx}" y="122" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="${opts.labelCol || BADGE_COLOR}">${esc2(cap)}</text>` : "";
+  let artwork;
+  if (opts.image) {
+    const box = cap ? 82 : 100;
+    const y = cap ? 16 : Math.round((144 - box) / 2) - 5;
+    artwork = `<image href="${esc2(opts.image)}" x="${cx - box / 2}" y="${y}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
+  } else {
+    artwork = iconMarkup("badge", cx - art / 2, artY, art, BADGE_COLOR);
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
+  ${artwork}
+  ${caption}
   ${dots}
 </svg>`;
 }
@@ -18149,47 +18233,83 @@ var LOG_METRICS = /* @__PURE__ */ new Set([
   "cost_session"
 ]);
 var visible = /* @__PURE__ */ new Set();
-var FACES = [
-  // Fuchsia vs sky: ~100° of hue apart so the two windows never blur together
-  // on the small LCD (violet vs sky proved too close side by side).
-  { metric: "session", label: "5 HOURS", accent: "#e879f9", pctCol: "#f0abfc", noteCol: "#f5d0fe", icon: "clock" },
-  // fuchsia family
-  { metric: "weekly", label: "WEEKLY", accent: "#38bdf8", pctCol: "#7dd3fc", noteCol: "#bae6fd", icon: "calendar" }
-  // sky family
-];
 function tint(hex, t) {
   const h = hex.replace("#", "");
   const ch = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
   return "#" + ch.map((v) => Math.round(v + (255 - v) * t).toString(16).padStart(2, "0")).join("");
 }
+function faceLabelOf(f, s) {
+  if (f.id === "session") return s.labelSession;
+  if (f.id === "weekly") return s.labelWeekly;
+  if (f.id === "model_weekly") return s.labelModel;
+  return void 0;
+}
+function faceColorOf(f, s) {
+  if (f.id === "session") return s.colorSession;
+  if (f.id === "weekly") return s.colorWeekly;
+  if (f.id === "model_weekly") return s.colorModel;
+  return void 0;
+}
 function facePalette(f, s) {
-  const custom2 = ((f.metric === "session" ? s.colorSession : s.colorWeekly) || "").trim();
+  const custom2 = (faceColorOf(f, s) || "").trim();
   if (/^#[0-9a-f]{6}$/i.test(custom2)) {
     return { accent: custom2, pctCol: tint(custom2, 0.38), noteCol: tint(custom2, 0.65) };
   }
   return { accent: f.accent, pctCol: f.pctCol, noteCol: f.noteCol };
 }
 var carousel = /* @__PURE__ */ new Map();
-function carouselAuto(s) {
-  return String(s.carouselAuto) !== "false";
+var MAX_BADGE_BYTES = 2 * 1024 * 1024;
+var badgeCache = /* @__PURE__ */ new Map();
+var MIME = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml"
+};
+function badgeImage(path5) {
+  const file2 = (path5 || "").trim();
+  if (!file2) return void 0;
+  const ext = file2.slice(file2.lastIndexOf(".")).toLowerCase();
+  const mime = MIME[ext];
+  if (!mime) return void 0;
+  try {
+    const st = (0, import_node_fs5.statSync)(file2);
+    if (st.size > MAX_BADGE_BYTES) return void 0;
+    const key = `${st.mtimeMs}:${st.size}`;
+    const hit = badgeCache.get(file2);
+    if (hit?.key === key) return hit.uri;
+    const uri = `data:${mime};base64,${(0, import_node_fs5.readFileSync)(file2).toString("base64")}`;
+    badgeCache.set(file2, { key, uri });
+    return uri;
+  } catch {
+    return void 0;
+  }
 }
 function syncCarousel(act, s) {
   const isCarousel = (s.metric || "session") === "carousel";
   const st = carousel.get(act.id);
-  if (st?.timer) clearInterval(st.timer);
+  if (st?.timer) clearTimeout(st.timer);
   if (!isCarousel) {
     carousel.delete(act.id);
     return;
   }
-  const cur = st ?? { face: 0 };
+  const cur = st ?? { face: startFace(s), start: s.carouselStart };
+  if (cur.start !== s.carouselStart) {
+    cur.start = s.carouselStart;
+    cur.face = startFace(s);
+  }
+  if (cur.face >= faceCount(s)) cur.face = startFace(s);
   cur.timer = void 0;
   if (carouselAuto(s)) {
-    const sec = Math.min(3600, Math.max(2, num(s.carouselSec, 10)));
-    cur.timer = setInterval(() => {
-      cur.face = (cur.face + 1) % FACES.length;
+    const step = () => {
+      cur.face = (cur.face + 1) % faceCount(s);
       draw(act, s).catch(() => {
       });
-    }, sec * 1e3);
+      cur.timer = setTimeout(step, faceSec(s, cur.face) * 1e3);
+    };
+    cur.timer = setTimeout(step, faceSec(s, cur.face) * 1e3);
   }
   carousel.set(act.id, cur);
 }
@@ -18353,13 +18473,28 @@ async function drawDial(act, s) {
 }
 async function drawCarousel(act, s) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
-  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s));
+  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s) ?? void 0);
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
-  const face = carousel.get(act.id)?.face ?? 0;
-  const f = FACES[face % FACES.length];
-  const override = f.metric === "session" ? s.labelSession : s.labelWeekly;
-  const label = (override || "").trim() || f.label;
+  const order = faceOrder(s);
+  const faces = order.length;
+  const face = (carousel.get(act.id)?.face ?? startFace(s)) % faces;
+  const f = order[face];
+  if (f.id === "badge") {
+    await act.setImage(
+      toDataUri(
+        svgBadge({
+          bg: bgOf(s),
+          face,
+          faces,
+          label: (s.badgeLabel || "").trim(),
+          image: badgeImage(s.badgeImage)
+        })
+      )
+    );
+    return;
+  }
+  const label = (faceLabelOf(f, s) || "").trim() || f.label;
   const pal = facePalette(f, s);
   if (!data) {
     const note2 = error40 === "no-token" || error40 === "token-expired" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
@@ -18373,7 +18508,7 @@ async function drawCarousel(act, s) {
           stale: true,
           bg: bgOf(s),
           face,
-          faces: FACES.length,
+          faces,
           accent: pal.accent,
           icon: f.icon,
           noteCol: pal.noteCol
@@ -18382,21 +18517,22 @@ async function drawCarousel(act, s) {
     );
     return;
   }
-  const { pct, resetsAt } = pickMetric(data, f.metric);
+  const { label: apiLabel, pct, resetsAt } = pickMetric(data, f.metric);
   maybeAlert(act, s, f.metric, pct, crit);
+  const shown = f.id === "model_weekly" && !(faceLabelOf(f, s) || "").trim() && apiLabel ? apiLabel.toUpperCase() : label;
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
   await act.setImage(
     toDataUri(
       svgBig({
-        label,
+        label: shown,
         pct,
         note,
         col,
         stale: !!stale,
         bg: bgOf(s),
         face,
-        faces: FACES.length,
+        faces,
         accent: pal.accent,
         icon: f.icon,
         noteCol: pal.noteCol
@@ -18406,7 +18542,7 @@ async function drawCarousel(act, s) {
 }
 async function drawGauge(act, s, metric) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
-  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s));
+  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s) ?? void 0);
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const title = (s.title || "").trim();
@@ -18535,7 +18671,7 @@ var UsageMeter = class extends (_a = SingletonAction) {
   onWillDisappear(ev) {
     visible.delete(ev.action);
     const st = carousel.get(ev.action.id);
-    if (st?.timer) clearInterval(st.timer);
+    if (st?.timer) clearTimeout(st.timer);
     carousel.delete(ev.action.id);
   }
   async onDidReceiveSettings(ev) {
@@ -18548,8 +18684,8 @@ var UsageMeter = class extends (_a = SingletonAction) {
   async onKeyDown(ev) {
     const s = ev.payload.settings;
     if ((s.metric || "session") === "carousel") {
-      const st = carousel.get(ev.action.id) ?? { face: 0 };
-      st.face = (st.face + 1) % FACES.length;
+      const st = carousel.get(ev.action.id) ?? { face: startFace(s), start: s.carouselStart };
+      st.face = (st.face + 1) % faceCount(s);
       carousel.set(ev.action.id, st);
       syncCarousel(ev.action, s);
       await draw(ev.action, s);

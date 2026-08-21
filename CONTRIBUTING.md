@@ -35,6 +35,8 @@ Requires Node 20+.
 
 ```bash
 npm install
+npm run typecheck  # tsc -p tsconfig.json (esbuild strips types without checking them)
+npm test           # node:test
 npm run build      # esbuild bundles src/plugin.ts -> bin/plugin.js
 ```
 
@@ -42,6 +44,10 @@ npm run build      # esbuild bundles src/plugin.ts -> bin/plugin.js
 committed**. Always edit the TypeScript in `src/`, then re-run `npm run build` so
 the bundle stays in sync. PRs that change `src/` but not the rebuilt `bin/plugin.js`
 will be asked to rebuild.
+
+Run `npm run typecheck` before pushing: esbuild only strips types, so it happily
+bundles a reference to a function that no longer exists — which surfaces as the
+plugin crash-looping on the Stream Deck rather than as a build error.
 
 Validate and (optionally) package the plugin:
 

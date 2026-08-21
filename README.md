@@ -39,7 +39,7 @@ at once. Two families:
 | --- | --- | --- | --- |
 | **Session (5h)** | Limit (live) | `oauth/usage` endpoint (same as Claude Code's `/usage`) | big % + ring gauge + reset countdown |
 | **Weekly (7d)** | Limit (live) | same endpoint | big % + ring gauge + reset countdown |
-| **Carousel (5h ↔ 7d)** | Limit (live) | same endpoint | one key alternating both windows: big %, progress bar, reset countdown, page dots — auto-rotates on a timer and/or switches on key press |
+| **Carousel** | Limit (live) | same endpoint | one key rotating through the faces you pick, in the order you set: the 5-hour, weekly and per-model windows (big %, progress bar, reset countdown, page dots) plus an optional picture-only **Badge** face — auto-rotates on a timer and/or switches on key press |
 | **Model weekly (7d)** | Limit (live) | same endpoint (`limits[]`, `weekly_scoped`) | the per-model weekly cap some plans report; `--` on plans without one |
 | **Burn rate** | Limit (live) | same endpoint, measured across polls | `%/h` on the 5h window + `full ~2h 10m` projection; `--` while idle |
 | **Tokens** | Local logs | Claude Code JSONL transcripts on disk | big value (e.g. `1.2M`) + `today` / `7 days` / `session` |
@@ -106,8 +106,11 @@ Select the key, then open its property inspector (panel below the canvas):
 | **Profile** | Which Claude account this key reads. One account? Leave it. Several — kept apart with `CLAUDE_CONFIG_DIR` — set it per key so work and personal sit side by side. |
 | **Custom folder** | A config folder discovery can't see. Only shown when no profile is picked. |
 | **Metric** | Which value the key shows: Carousel / Session / Weekly (live limits), or Tokens / Cost for today / 7 days / session. |
-| **Auto-rotate & Interval** (Carousel) | Whether the carousel flips between the 5-hour and weekly faces on its own, and every how many seconds (default `10`). Pressing the key always flips immediately. |
-| **5h / Weekly label & color** (Carousel) | Per-face label (defaults `5 HOURS` / `WEEKLY` — localize freely) and base color; the % / bar / countdown tints derive from the base color. |
+| **Faces** (Carousel) | Which faces this key rotates through, and in what order — tick to include, arrows to reorder. Defaults to the 5-hour + weekly pairing; the **Badge** starts off, and ticking it puts it first, as a splash before the numbers. |
+| **Starts on** (Carousel) | Which of those faces the key shows when it loads. With **Auto-rotate** off the key stays on it, so two carousel keys side by side can each hold one window permanently — no second action type needed. |
+| **Auto-rotate & Interval** (Carousel) | Whether the carousel flips between the 5-hour and weekly faces on its own, and every how many seconds (default `10`). Dragging the interval to `0` ("never") also pins the face. Pressing the key always flips immediately. |
+| **5h / Weekly / Model label & color** (Carousel) | Per-face label (defaults `5 HOURS` / `WEEKLY`, and the model's own name for the model face — localize freely) and base color; the % / bar / countdown tints derive from the base color. |
+| **Badge** (Carousel) | A picture-only face: a gauge mark by default, or any image you point **Badge image** at (PNG/JPG/GIF/WebP/SVG, up to 2 MB, fitted whole). **Badge for** sets how long it holds, overriding the carousel interval, and **Badge caption** adds a word under it. |
 | **Subtitle** (Tokens / Cost) | Overrides the scope line under the value (`today` / `7 days` / `session`) — handy for localization. |
 | **Amber threshold** | % where a live limit metric turns amber (default `50`). |
 | **Red threshold** | % where a live limit metric turns red (default `80`). |
@@ -230,6 +233,8 @@ The source is included so you can tweak colors, labels, thresholds, or layout.
 
 ```bash
 npm install
+npm run typecheck  # tsc over src/, test/ and scripts/ (no emit)
+npm test           # node:test over the pure logic in src/usage-core.ts
 npm run build      # bundles src/plugin.ts -> com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js
 npm run preview    # regenerate docs/preview.png (README banner) from the real key faces
 npx streamdeck validate com.saeedkolivand.claude-usage.sdPlugin

@@ -6,8 +6,9 @@
   "type": "module",
   "description": "Stream Deck plugin showing AI coding session/weekly usage (works with Claude Code)",
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
     "build": "esbuild src/plugin.ts --bundle --platform=node --target=node20 --format=cjs --outfile=com.saeedkolivand.claude-usage.sdPlugin/bin/plugin.js",
-    "test": "esbuild test/profiles.test.ts test/refresh.test.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outdir=test --out-extension:.js=.mjs && node --test test/profiles.test.mjs test/refresh.test.mjs",
+    "test": "esbuild test/profiles.test.ts test/refresh.test.ts test/carousel.test.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outdir=test --out-extension:.js=.mjs && node --test test/profiles.test.mjs test/refresh.test.mjs test/carousel.test.mjs",
     "preview": "esbuild scripts/make-preview.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-preview.mjs && node scripts/.make-preview.mjs",
     "gallery": "esbuild scripts/make-gallery.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-gallery.mjs && node scripts/.make-gallery.mjs",
     "marketplace": "esbuild scripts/make-marketplace.ts --bundle --platform=node --target=node20 --format=esm --external:sharp --outfile=scripts/.make-marketplace.mjs && node scripts/.make-marketplace.mjs"
@@ -20,7 +21,9 @@
     "@elgato/cli": "^1.7.4",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^11.0.1",
+    "@types/node": "^20.19.43",
     "esbuild": "^0.28.0",
-    "semantic-release": "^25.0.9"
+    "semantic-release": "^25.0.9",
+    "typescript": "^5.9.3"
   }
 }

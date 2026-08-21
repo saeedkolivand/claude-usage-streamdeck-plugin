@@ -1,4 +1,5 @@
 // plugin.ts — Stream Deck wiring around usage-core.
+import { readFileSync, statSync } from "node:fs";
 import streamDeck, {
   action,
   SingletonAction,
@@ -26,7 +27,14 @@ import {
   fmtTokens,
   fmtCost,
   svgStat,
+  type Face,
+  carouselAuto,
+  faceCount,
+  faceOrder,
+  faceSec,
+  startFace,
   svgBig,
+  svgBadge,
   svgSpark,
   svgDial,
   burnRate,
@@ -47,8 +55,15 @@ type Settings = {
   subtitle?: string; // stat tiles: overrides the scope line ("today" / "7 days" / "session")
   carouselSec?: number; // seconds between automatic face switches (default 10)
   carouselAuto?: boolean; // false disables auto-rotate; key press still switches
+  carouselStart?: string; // face shown on load: "session" (default) or "weekly"
+  faceOrder?: string; // carousel faces to show, in order (comma-separated ids)
+  badgeSec?: number; // seconds the badge face stays up; overrides the interval
+  badgeLabel?: string; // optional caption under the badge; empty = mark alone
+  badgeImage?: string; // path to a user-supplied image shown instead of the gauge
   labelSession?: string; // carousel face label override (default "5 HOURS")
   labelWeekly?: string; // carousel face label override (default "WEEKLY")
+  labelModel?: string; // carousel face label override (default: the model's name)
+  colorModel?: string; // carousel face base color override (default indigo)
   colorSession?: string; // carousel face base color override (default fuchsia)
   colorWeekly?: string; // carousel face base color override (default sky)
   alertFlash?: boolean; // false disables the key flash on crossing the Red threshold
@@ -89,20 +104,6 @@ const visible = new Set<any>();
 // lives in its color family (accent 400 for header/dot, 300 for % and bar,
 // 200 for the countdown); past warn/crit the % and bar switch to the semantic
 // amber/red, which pops against the cool family tones.
-const FACES: {
-  metric: string;
-  label: string;
-  accent: string;
-  pctCol: string;
-  noteCol: string;
-  icon: "clock" | "calendar";
-}[] = [
-  // Fuchsia vs sky: ~100° of hue apart so the two windows never blur together
-  // on the small LCD (violet vs sky proved too close side by side).
-  { metric: "session", label: "5 HOURS", accent: "#e879f9", pctCol: "#f0abfc", noteCol: "#f5d0fe", icon: "clock" }, // fuchsia family
-  { metric: "weekly", label: "WEEKLY", accent: "#38bdf8", pctCol: "#7dd3fc", noteCol: "#bae6fd", icon: "calendar" }, // sky family
-];
-
 // Blend a #rrggbb toward white by t (0..1) — derives the lighter family
 // shades (% / countdown) from a user-picked base color.
 function tint(hex: string, t: number): string {
@@ -111,10 +112,26 @@ function tint(hex: string, t: number): string {
   return "#" + ch.map((v) => Math.round(v + (255 - v) * t).toString(16).padStart(2, "0")).join("");
 }
 
+/** This key's custom label for a face, if any. */
+function faceLabelOf(f: Face, s: Settings): string | undefined {
+  if (f.id === "session") return s.labelSession;
+  if (f.id === "weekly") return s.labelWeekly;
+  if (f.id === "model_weekly") return s.labelModel;
+  return undefined;
+}
+
+/** This key's custom base color for a face, if any. */
+function faceColorOf(f: Face, s: Settings): string | undefined {
+  if (f.id === "session") return s.colorSession;
+  if (f.id === "weekly") return s.colorWeekly;
+  if (f.id === "model_weekly") return s.colorModel;
+  return undefined;
+}
+
 // The face's palette: the preset family, or one derived from the per-key
 // custom base color (tint ratios matched to the preset 400→300→200 steps).
-function facePalette(f: (typeof FACES)[number], s: Settings): { accent: string; pctCol: string; noteCol: string } {
-  const custom = ((f.metric === "session" ? s.colorSession : s.colorWeekly) || "").trim();
+function facePalette(f: Face, s: Settings): { accent: string; pctCol: string; noteCol: string } {
+  const custom = (faceColorOf(f, s) || "").trim();
   if (/^#[0-9a-f]{6}$/i.test(custom)) {
     return { accent: custom, pctCol: tint(custom, 0.38), noteCol: tint(custom, 0.65) };
   }
@@ -122,10 +139,44 @@ function facePalette(f: (typeof FACES)[number], s: Settings): { accent: string; 
 }
 
 // Per-key carousel state (current face + auto-rotate timer), keyed by action id.
-const carousel = new Map<string, { face: number; timer?: ReturnType<typeof setInterval> }>();
+const carousel = new Map<
+  string,
+  { face: number; start?: string; timer?: ReturnType<typeof setTimeout> }
+>();
 
-function carouselAuto(s: Settings): boolean {
-  return String(s.carouselAuto) !== "false"; // default on; sdpi may store bool or string
+// A user-supplied badge image, inlined as a data URI so it can go straight into
+// the SVG. Cached by path + mtime + size: the carousel repaints on every
+// rotation and on every refresh tick, and re-reading the file each time would
+// be pure waste — but editing the picture in place still takes effect.
+const MAX_BADGE_BYTES = 2 * 1024 * 1024; // a key is 144px; anything larger is a mistake
+const badgeCache = new Map<string, { key: string; uri: string }>();
+const MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+};
+
+function badgeImage(path?: string): string | undefined {
+  const file = (path || "").trim();
+  if (!file) return undefined;
+  const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
+  const mime = MIME[ext];
+  if (!mime) return undefined; // an unreadable pick falls back to the built-in mark
+  try {
+    const st = statSync(file);
+    if (st.size > MAX_BADGE_BYTES) return undefined;
+    const key = `${st.mtimeMs}:${st.size}`;
+    const hit = badgeCache.get(file);
+    if (hit?.key === key) return hit.uri;
+    const uri = `data:${mime};base64,${readFileSync(file).toString("base64")}`;
+    badgeCache.set(file, { key, uri });
+    return uri;
+  } catch {
+    return undefined; // missing file, no permission — draw the gauge instead
+  }
 }
 
 // (Re)arm the auto-rotate timer to match the key's settings; tears everything
@@ -133,19 +184,32 @@ function carouselAuto(s: Settings): boolean {
 function syncCarousel(act: any, s: Settings): void {
   const isCarousel = (s.metric || "session") === "carousel";
   const st = carousel.get(act.id);
-  if (st?.timer) clearInterval(st.timer);
+  if (st?.timer) clearTimeout(st.timer);
   if (!isCarousel) {
     carousel.delete(act.id);
     return;
   }
-  const cur = st ?? { face: 0 };
+  const cur = st ?? { face: startFace(s), start: s.carouselStart };
+  // Changing the starting face in the inspector jumps the key there right away,
+  // so the setting can be previewed without waiting for a rotation or a press.
+  if (cur.start !== s.carouselStart) {
+    cur.start = s.carouselStart;
+    cur.face = startFace(s);
+  }
+  // Turning a face off while it is on screen would otherwise leave the key
+  // parked on a face that no longer exists.
+  if (cur.face >= faceCount(s)) cur.face = startFace(s);
   cur.timer = undefined;
   if (carouselAuto(s)) {
-    const sec = Math.min(3600, Math.max(2, num(s.carouselSec, 10)));
-    cur.timer = setInterval(() => {
-      cur.face = (cur.face + 1) % FACES.length;
+    // Faces hold for different lengths (the badge is a quick signature, the
+    // numbers stay up longer), so each step schedules the next one itself
+    // instead of running on one fixed interval.
+    const step = () => {
+      cur.face = (cur.face + 1) % faceCount(s);
       draw(act, s).catch(() => {});
-    }, sec * 1000);
+      cur.timer = setTimeout(step, faceSec(s, cur.face) * 1000);
+    };
+    cur.timer = setTimeout(step, faceSec(s, cur.face) * 1000);
   }
   carousel.set(act.id, cur);
 }
@@ -327,14 +391,30 @@ async function drawDial(act: any, s: Settings): Promise<void> {
 
 async function drawCarousel(act: any, s: Settings): Promise<void> {
   const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
-  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s)); // per-profile cache
+  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s) ?? undefined); // per-profile cache
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
-  const face = carousel.get(act.id)?.face ?? 0;
-  const f = FACES[face % FACES.length];
+  const order = faceOrder(s);
+  const faces = order.length;
+  const face = (carousel.get(act.id)?.face ?? startFace(s)) % faces;
+  const f = order[face];
+  // The badge face carries no metric — it's the signature between numbers.
+  if (f.id === "badge") {
+    await act.setImage(
+      toDataUri(
+        svgBadge({
+          bg: bgOf(s),
+          face,
+          faces,
+          label: (s.badgeLabel || "").trim(),
+          image: badgeImage(s.badgeImage),
+        }),
+      ),
+    );
+    return;
+  }
   // Per-key label and color overrides for each face; empty = built-in default.
-  const override = f.metric === "session" ? s.labelSession : s.labelWeekly;
-  const label = (override || "").trim() || f.label;
+  const label = (faceLabelOf(f, s) || "").trim() || f.label;
   const pal = facePalette(f, s);
 
   if (!data) {
@@ -348,23 +428,29 @@ async function drawCarousel(act: any, s: Settings): Promise<void> {
       toDataUri(
         svgBig({
           label, pct: null, note, col: color(null, warn, crit), stale: true, bg: bgOf(s),
-          face, faces: FACES.length, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
+          face, faces, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
         }),
       ),
     );
     return;
   }
 
-  const { pct, resetsAt } = pickMetric(data, f.metric);
+  const { label: apiLabel, pct, resetsAt } = pickMetric(data, f.metric);
   maybeAlert(act, s, f.metric, pct, crit);
+  // The model face is named by the API after the account's model ("Fable"),
+  // which beats a generic "MODEL" — a custom label still wins over both.
+  const shown =
+    f.id === "model_weekly" && !(faceLabelOf(f, s) || "").trim() && apiLabel
+      ? apiLabel.toUpperCase()
+      : label;
   const note = pct == null ? "n/a here" : untilText(resetsAt);
   // Family tone while healthy; semantic amber/red once past the thresholds.
   const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
   await act.setImage(
     toDataUri(
       svgBig({
-        label, pct, note, col, stale: !!stale, bg: bgOf(s),
-        face, faces: FACES.length, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
+        label: shown, pct, note, col, stale: !!stale, bg: bgOf(s),
+        face, faces, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
       }),
     ),
   );
@@ -372,7 +458,7 @@ async function drawCarousel(act: any, s: Settings): Promise<void> {
 
 async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
   const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
-  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s)); // per-profile cache
+  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s) ?? undefined); // per-profile cache
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
   const title = (s.title || "").trim(); // custom label; empty = use the metric default
@@ -521,7 +607,7 @@ class UsageMeter extends SingletonAction<Settings> {
   override onWillDisappear(ev: WillDisappearEvent<Settings>): void {
     visible.delete(ev.action);
     const st = carousel.get(ev.action.id);
-    if (st?.timer) clearInterval(st.timer);
+    if (st?.timer) clearTimeout(st.timer);
     carousel.delete(ev.action.id);
   }
 
@@ -539,8 +625,8 @@ class UsageMeter extends SingletonAction<Settings> {
     if ((s.metric || "session") === "carousel") {
       // Tap = flip to the other face right away (from cache, so it's instant)
       // and restart the auto timer so it doesn't flip again a moment later.
-      const st = carousel.get(ev.action.id) ?? { face: 0 };
-      st.face = (st.face + 1) % FACES.length;
+      const st = carousel.get(ev.action.id) ?? { face: startFace(s), start: s.carouselStart };
+      st.face = (st.face + 1) % faceCount(s);
       carousel.set(ev.action.id, st);
       syncCarousel(ev.action, s);
       await draw(ev.action, s);
