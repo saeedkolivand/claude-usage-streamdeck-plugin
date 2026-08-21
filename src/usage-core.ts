@@ -1087,20 +1087,57 @@ export function svgSpark(opts: {
 // progress bar, reset countdown below, page dots at the bottom. The accent
 // gives each window its own identity; the % and bar keep the semantic
 // green/amber/red so "how close to the limit" never changes meaning.
-export type FaceIcon = "clock" | "calendar";
+export type FaceIcon = "clock" | "calendar" | "badge" | "model";
+
+/** The plugin's signature color, worn by the badge face. */
+export const BADGE_COLOR = "#d97757";
 
 function iconMarkup(icon: FaceIcon, x: number, y: number, sizePx: number, stroke: string): string {
   // Icons drawn on a 16x16 grid, scaled to sizePx, stroke-only for crispness.
   const s = sizePx / 16;
-  const g = (inner: string) =>
-    `<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+  // The badge is a fixed signature mark, not a face accent: it keeps its color.
+  const col = icon === "badge" ? BADGE_COLOR : stroke;
+  const g = (inner: string, attrs = `fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`) =>
+    `<g transform="translate(${x} ${y}) scale(${s})" ${attrs}>${inner}</g>`;
   if (icon === "clock") {
     return g(`<circle cx="8" cy="8" r="6.5"/><path d="M8 4.5V8l2.6 1.8"/>`);
+  }
+  if (icon === "badge") {
+    // A speedometer — this plugin is a usage meter, so the dial says what the
+    // key is without borrowing anyone's branding. Just the sweep, the needle
+    // and its pivot: tick marks crowded the arc shut at key size. The stroke
+    // thins as the mark grows, or the big badge face turns into a blob.
+    const w = sizePx > 40 ? 1.5 : 2;
+    return g(
+      `<path d="M2.74 11.12A5.6 5.6 0 1 1 13.26 11.12"/><path d="M8.0 9.2L10.47 5.68"/>` +
+        `<circle cx="8.0" cy="9.2" r="${w * 0.85}" fill="${col}" stroke="none"/>`,
+      `fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`,
+    );
+  }
+  if (icon === "model") {
+    // A chip: the per-model weekly limit is the one tied to the model itself.
+    return g(
+      `<rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/>` +
+        `<path d="M6.5 1.5v2M9.5 1.5v2M6.5 12.5v2M9.5 12.5v2M1.5 6.5h2M1.5 9.5h2M12.5 6.5h2M12.5 9.5h2"/>`,
+    );
   }
   // calendar: body, binder tabs, header line
   return g(
     `<rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/>`,
   );
+}
+
+// The carousel's page-dot strip, shared by every carousel face so the dots
+// never drift apart between them.
+function pageDots(face: number | undefined, faces: number | undefined, accent: string, cx: number): string {
+  if (!faces || faces <= 1) return "";
+  const gap = 14;
+  const x0 = cx - ((faces - 1) * gap) / 2;
+  let out = "";
+  for (let i = 0; i < faces; i++) {
+    out += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (face ?? 0) ? accent : "#4b5563"}"/>`;
+  }
+  return out;
 }
 
 export function svgBig(opts: {
@@ -1151,14 +1188,7 @@ export function svgBig(opts: {
     header = `<text x="${cx}" y="26" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${accent}">${esc(opts.label)}</text>`;
   }
 
-  let dots = "";
-  if (opts.faces && opts.faces > 1) {
-    const gap = 14;
-    const x0 = cx - ((opts.faces - 1) * gap) / 2;
-    for (let i = 0; i < opts.faces; i++) {
-      dots += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (opts.face ?? 0) ? accent : "#4b5563"}"/>`;
-    }
-  }
+  const dots = pageDots(opts.face, opts.faces, accent, cx);
 
   // Slim progress bar between the % and the countdown: dark track always
   // visible, colored fill proportional to the percentage. rx stays smaller
@@ -1181,6 +1211,138 @@ export function svgBig(opts: {
   <text x="${cx}" y="${pctBaseline}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${symSize}" font-weight="700">%</tspan>`}</text>
   ${bar}
   <text x="${cx}" y="${opts.faces && opts.faces > 1 ? 129 : 131}" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${noteFill}">${esc(opts.note)}</text>
+  ${dots}
+</svg>`;
+}
+
+// ---------------------------------------------------------------------------
+// Carousel faces
+//
+// A carousel key rotates through a list of faces the user picks and orders.
+// Everything here is pure — which faces a key shows, where it starts, how long
+// each one holds — so the rendering side stays a thin wrapper over it.
+
+export type CarouselSettings = {
+  faceOrder?: string; // faces to show, in order (comma-separated ids)
+  carouselStart?: string; // id of the face shown on load
+  carouselSec?: number; // seconds between switches; 0 = never
+  carouselAuto?: boolean; // false disables auto-rotate; key press still switches
+  badgeSec?: number; // seconds the badge holds; overrides carouselSec
+};
+
+export type Face = {
+  id: string; // stable key used in the face order and in settings
+  metric: string; // "" for the badge, which reads no metric
+  label: string;
+  accent: string;
+  pctCol: string;
+  noteCol: string;
+  icon: FaceIcon;
+};
+
+export const FACES: Face[] = [
+  // Fuchsia vs sky vs indigo: far enough apart in hue that the windows never
+  // blur together on the small LCD (violet vs sky proved too close side by side).
+  { id: "session", metric: "session", label: "5 HOURS", accent: "#e879f9", pctCol: "#f0abfc", noteCol: "#f5d0fe", icon: "clock" }, // fuchsia family
+  { id: "weekly", metric: "weekly", label: "WEEKLY", accent: "#38bdf8", pctCol: "#7dd3fc", noteCol: "#bae6fd", icon: "calendar" }, // sky family
+  { id: "model_weekly", metric: "model_weekly", label: "MODEL", accent: "#818cf8", pctCol: "#a5b4fc", noteCol: "#c7d2fe", icon: "model" }, // indigo family
+  { id: "badge", metric: "", label: "BADGE", accent: BADGE_COLOR, pctCol: BADGE_COLOR, noteCol: BADGE_COLOR, icon: "badge" },
+];
+
+// Absent/empty face order = the original pairing, which is what every key
+// configured before this setting existed should keep doing.
+export const DEFAULT_FACE_ORDER = ["session", "weekly"];
+
+/** The faces this key rotates through, in order. */
+export function faceOrder(s: CarouselSettings): Face[] {
+  const raw = (s.faceOrder || "").trim();
+  const ids = raw ? raw.split(",").map((t) => t.trim()).filter(Boolean) : DEFAULT_FACE_ORDER;
+  const seen = new Set<string>();
+  const out = ids
+    .filter((id) => !seen.has(id) && seen.add(id)) // ignore accidental repeats
+    .map((id) => FACES.find((f) => f.id === id))
+    .filter((f): f is Face => !!f);
+  // A key with every face switched off would render nothing at all; fall back
+  // to the session face rather than showing a blank key.
+  return out.length ? out : [FACES[0]];
+}
+
+/** The face a key starts on when it appears — an index into its own order.
+ *  With auto-rotate off this pins the key to one window for good, so two keys
+ *  side by side can hold the 5-hour and the weekly face permanently without
+ *  needing a second action type. */
+export function startFace(s: CarouselSettings): number {
+  const order = faceOrder(s);
+  const i = order.findIndex((f) => f.id === s.carouselStart);
+  return i < 0 ? 0 : i; // a face that was switched off falls back to the first
+}
+
+/** How many faces this key rotates through. */
+export function faceCount(s: CarouselSettings): number {
+  return faceOrder(s).length;
+}
+
+/** Auto-rotate is on unless the checkbox is off or the interval is dialled to
+ *  0 — the slider's own "never switch" position, for pinning a key to one face
+ *  without hunting for the checkbox. */
+export function carouselAuto(s: CarouselSettings): boolean {
+  if (numOr(s.carouselSec, 10) === 0) return false;
+  return String(s.carouselAuto) !== "false"; // default on; sdpi may store bool or string
+}
+
+/** Seconds a face stays up. The badge is a quick signature between the
+ *  numbers, so its dwell time overrides the carousel interval; every other
+ *  face uses the interval. */
+export function faceSec(s: CarouselSettings, face: number): number {
+  const f = faceOrder(s)[face];
+  const sec = f?.id === "badge" ? numOr(s.badgeSec, 3) : numOr(s.carouselSec, 10);
+  return Math.min(3600, Math.max(1, sec));
+}
+
+/** A finite number from a setting, else the fallback. sdpi may hand back
+ *  strings, so "8" has to count as 8. */
+function numOr(v: unknown, d: number): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+
+// The carousel's badge face: a mark filling the key, so a glance at the deck
+// says what this key is. No number, no bar — the numbers get their own faces;
+// this one is the signature. Keeps the page dots so the rotation still reads as
+// a carousel. `image` swaps the built-in gauge for the user's own picture.
+export function svgBadge(opts: {
+  bg?: string;
+  face?: number;
+  faces?: number;
+  label?: string; // optional caption under the mark; empty = mark alone
+  labelCol?: string;
+  image?: string; // data: URI of a user-supplied image, drawn instead of the gauge
+}): string {
+  const size = 144;
+  const cx = 72;
+  const cap = (opts.label || "").trim();
+  const art = cap ? 74 : 86;
+  // Centered on the key, nudged up off the page dots; with a caption it lifts
+  // further to leave the caption its own room.
+  const artY = cap ? 26 : Math.round((144 - art) / 2) - 6;
+  const dots = pageDots(opts.face, opts.faces, BADGE_COLOR, cx);
+  const caption = cap
+    ? `<text x="${cx}" y="122" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="${opts.labelCol || BADGE_COLOR}">${esc(cap)}</text>`
+    : "";
+  // A custom image gets more of the key than the line icon does, and is fitted
+  // whole (never cropped) so tall and wide pictures both survive.
+  let artwork: string;
+  if (opts.image) {
+    const box = cap ? 82 : 100;
+    const y = cap ? 16 : Math.round((144 - box) / 2) - 5;
+    artwork = `<image href="${esc(opts.image)}" x="${cx - box / 2}" y="${y}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
+  } else {
+    artwork = iconMarkup("badge", cx - art / 2, artY, art, BADGE_COLOR);
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  <rect width="${size}" height="${size}" rx="20" fill="${opts.bg || "#0f1216"}"/>
+  ${artwork}
+  ${caption}
   ${dots}
 </svg>`;
 }

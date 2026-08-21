@@ -28,6 +28,71 @@
       .group[hidden] {
         display: none;
       }
+      /* The section headers inherit the browser's default black, which is all
+         but invisible on the property inspector's dark gunmetal background. */
+      summary {
+        color: #e6e6e6;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 4px 0;
+      }
+      summary:hover {
+        color: #ffffff;
+      }
+      /* The carousel face list: one row per face, tick to include, arrows to
+         reorder. Rows are plain buttons so they inherit the host theme. */
+      .face-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        width: 100%;
+      }
+      .face-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 4px;
+        border-radius: 4px;
+        background: #2b2b2b;
+      }
+      .face-row input[type="checkbox"] {
+        margin: 0;
+        accent-color: #d97757;
+      }
+      .face-row .face-name {
+        flex: 1;
+        font-size: 12px;
+        color: #e6e6e6;
+      }
+      .face-row.off .face-name {
+        color: #8a8a8a;
+      }
+      .face-row .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        flex: none;
+      }
+      .face-row button {
+        width: 20px;
+        height: 18px;
+        padding: 0;
+        font-size: 11px;
+        line-height: 1;
+        color: #e6e6e6;
+        background: #3d3d3d;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .face-row button:hover:not(:disabled) {
+        background: #4d4d4d;
+      }
+      .face-row button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
     </style>
   </head>
   <body>
@@ -53,7 +118,7 @@
     <sdpi-item label="Metric">
       <sdpi-select setting="metric" default="session" id="metric-select">
         <optgroup label="Limits — live (/usage)">
-          <option value="carousel">Carousel — 5h &#x2194; Weekly</option>
+          <option value="carousel">Carousel — rotating faces</option>
           <option value="session">Session (5h)</option>
           <option value="weekly">Weekly (7d)</option>
           <option value="model_weekly">Model weekly (7d)</option>
@@ -72,43 +137,27 @@
       </sdpi-select>
     </sdpi-item>
 
-    <details>
-      <summary>Appearance — colors for this key</summary>
-      <sdpi-item label="Background">
-        <sdpi-color setting="bg"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="Numbers">
-        <sdpi-color setting="textColor"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="Labels">
-        <sdpi-color setting="labelColor"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="Accent">
-        <sdpi-color setting="accentColor"></sdpi-color>
+    <!-- Carousel only -->
+    <div class="group" id="group-carousel" hidden>
+      <sdpi-item label="Faces">
+        <div id="face-list" class="face-list"></div>
       </sdpi-item>
       <sdpi-item label="">
         <small class="hint">
-          Colors for <b>this key only</b> (works on the Stream Deck + touch strip
-          too). <b>Background</b> is the whole tile. <b>Numbers</b> is the big
-          value (the % or token count). <b>Labels</b> is the title and the small
-          text under the value. <b>Accent</b> is the little underline, the chart
-          bars and the icons. Pickers you don't touch keep the built-in look.
-          The Carousel keeps its own face colors (set below) — only
-          <b>Background</b> applies to it.
+          Tick the faces this key rotates through and use the arrows to set
+          their order. <b>Starts on</b> then picks which of them the key shows
+          when it loads. The <b>Badge</b> is off by default; tick it and it
+          leads the rotation, like a splash before the numbers.
         </small>
       </sdpi-item>
-      <sdpi-item label="">
-        <sdpi-button id="reset-colors">Reset colors to default</sdpi-button>
+      <sdpi-item label="Starts on">
+        <sdpi-select setting="carouselStart" id="carousel-start-select"></sdpi-select>
       </sdpi-item>
-    </details>
-
-    <!-- Carousel only -->
-    <div class="group" id="group-carousel" hidden>
       <sdpi-item label="Auto-rotate">
         <sdpi-checkbox setting="carouselAuto" default="true" label="Switch faces automatically"></sdpi-checkbox>
       </sdpi-item>
       <sdpi-item label="Interval: 10 s" id="carousel-interval-item">
-        <sdpi-range setting="carouselSec" min="3" max="60" step="1" default="10" showlabels id="carousel-interval-range"></sdpi-range>
+        <sdpi-range setting="carouselSec" min="0" max="60" step="1" default="10" showlabels id="carousel-interval-range"></sdpi-range>
       </sdpi-item>
       <sdpi-item label="5h label">
         <sdpi-textfield setting="labelSession" placeholder="5 HOURS" maxlength="12"></sdpi-textfield>
@@ -122,11 +171,32 @@
       <sdpi-item label="Weekly color">
         <sdpi-color setting="colorWeekly" default="#38bdf8"></sdpi-color>
       </sdpi-item>
+      <sdpi-item label="Model label">
+        <sdpi-textfield setting="labelModel" placeholder="(the model's name)" maxlength="12"></sdpi-textfield>
+      </sdpi-item>
+      <sdpi-item label="Model color">
+        <sdpi-color setting="colorModel" default="#818cf8"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Badge for: 3 s" id="badge-secs-item">
+        <sdpi-range setting="badgeSec" min="1" max="30" step="1" default="3" showlabels id="badge-secs-range"></sdpi-range>
+      </sdpi-item>
+      <sdpi-item label="Badge image">
+        <sdpi-file setting="badgeImage" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml"></sdpi-file>
+      </sdpi-item>
+      <sdpi-item label="Badge caption">
+        <sdpi-textfield setting="badgeLabel" placeholder="(none)" maxlength="12"></sdpi-textfield>
+      </sdpi-item>
       <sdpi-item label="">
         <small class="hint">
-          The key alternates the <b>5-hour</b> and <b>weekly</b> faces every
-          <i>Interval</i> seconds; pressing the key switches immediately (works
-          even with auto-rotate off). Labels and base colors are per key — e.g.
+          The key cycles through the ticked faces every <i>Interval</i> seconds;
+          pressing the key switches immediately (works even with auto-rotate
+          off). <i>Starts on</i> picks the face the key
+          shows when it loads &mdash; turn <i>Auto-rotate</i> off (or drag
+          <i>Interval</i> down to <i>never</i>) and it stays there, so two keys
+          side by side can hold one window each. The <i>Badge</i> face is a
+          picture rather than a number &mdash; a gauge by default, or any image
+          you point it at &mdash; held for its own number of seconds, which
+          overrides the interval. Labels and base colors are per key — e.g.
           <code>5 HORAS</code> / <code>SEMANAL</code>. The %, bar and countdown
           tones derive from the base color; past the Amber/Red thresholds the %
           and bar switch to the alert colors.
@@ -160,6 +230,36 @@
         </small>
       </sdpi-item>
     </div>
+
+    <details>
+      <summary>Appearance — colors for this key</summary>
+      <sdpi-item label="Background">
+        <sdpi-color setting="bg"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Numbers">
+        <sdpi-color setting="textColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Labels">
+        <sdpi-color setting="labelColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Accent">
+        <sdpi-color setting="accentColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          Colors for <b>this key only</b> (works on the Stream Deck + touch strip
+          too). <b>Background</b> is the whole tile. <b>Numbers</b> is the big
+          value (the % or token count). <b>Labels</b> is the title and the small
+          text under the value. <b>Accent</b> is the little underline, the chart
+          bars and the icons. Pickers you don't touch keep the built-in look.
+          The Carousel keeps its own face colors (set below) — only
+          <b>Background</b> applies to it.
+        </small>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-button id="reset-colors">Reset colors to default</sdpi-button>
+      </sdpi-item>
+    </details>
 
     <!-- Live limit metrics (gauges and carousel) -->
     <div class="group" id="group-thresholds" hidden>
@@ -242,11 +342,137 @@
         const item = document.getElementById("carousel-interval-item");
         const range = document.getElementById("carousel-interval-range");
         const showInterval = () => {
-          const v = range.value != null && range.value !== "" ? range.value : 10;
-          item.setAttribute("label", `Interval: ${v} s`);
+          const v = range.value != null && range.value !== "" ? Number(range.value) : 10;
+          // 0 is the slider's own "stay put" position — same effect as
+          // unticking Auto-rotate, so say so instead of showing "0 s".
+          item.setAttribute("label", v === 0 ? "Interval: never" : `Interval: ${v} s`);
         };
         range.addEventListener("input", showInterval);
         range.addEventListener("change", showInterval);
+
+        // --- Carousel face list -------------------------------------------
+        // faceOrder is stored as a comma-separated list of face ids, in the
+        // order the key rotates through them; ids left out are not shown.
+        // The rows keep every face visible (unticked ones sink to the bottom)
+        // so a face switched off is still findable.
+        const FACE_DEFS = [
+          // The badge leads the list: switched on, it's the splash the key
+          // opens with, before the numbers. Off by default all the same.
+          { id: "badge", name: "Badge (splash)", color: "#d97757" },
+          { id: "session", name: "5-hour session", color: "#e879f9" },
+          { id: "weekly", name: "Weekly", color: "#38bdf8" },
+          { id: "model_weekly", name: "Model weekly", color: "#818cf8" },
+        ];
+        // The rotation a key starts life with: the two windows. The badge and
+        // the model face sit in the list unticked until the user wants them.
+        const DEFAULT_ORDER = ["session", "weekly"];
+        const faceList = document.getElementById("face-list");
+        const startSelect = document.getElementById("carousel-start-select");
+        let order = DEFAULT_ORDER.slice(); // the ticked ids, in rotation order
+        // Row order for the whole list, ticked or not. Persisted separately so
+        // an unticked face keeps its place instead of jumping when re-ticked.
+        let layout = FACE_DEFS.map((f) => f.id);
+
+        const readOrder = (settings) => {
+          const raw = (settings.faceOrder || "").trim();
+          const ids = raw ? raw.split(",").map((t) => t.trim()).filter(Boolean) : DEFAULT_ORDER;
+          return ids.filter((id, i) => FACE_DEFS.some((f) => f.id === id) && ids.indexOf(id) === i);
+        };
+
+        const saveOrder = async () => {
+          const { settings } = await SDPIComponents.streamDeckClient.getSettings();
+          settings.faceOrder = order.join(",");
+          settings.faceLayout = layout.join(","); // inspector-only: row order
+          // Starting on a face that is no longer shown would silently fall back
+          // to the first one; keep the stored value honest instead.
+          if (settings.carouselStart && !order.includes(settings.carouselStart)) {
+            settings.carouselStart = order[0] || "";
+          }
+          await SDPIComponents.streamDeckClient.setSettings(settings);
+        };
+
+        // "Starts on" only offers faces this key actually shows.
+        const syncStartOptions = (current) => {
+          const want = order.length ? order : DEFAULT_ORDER;
+          startSelect.innerHTML = want
+            .map((id) => {
+              const f = FACE_DEFS.find((d) => d.id === id);
+              return `<option value="${id}">${f ? f.name : id}</option>`;
+            })
+            .join("");
+          const pick = current && want.includes(current) ? current : want[0];
+          if (pick) startSelect.value = pick;
+        };
+
+        const renderFaces = () => {
+          // Every face has a row, in one stable order: `layout` is the whole
+          // list, `order` is just which of them are ticked. Ticking a face
+          // therefore never moves its row — it only joins the rotation where
+          // it already sits.
+          const rows = layout
+            .map((id) => ({ def: FACE_DEFS.find((f) => f.id === id), on: order.includes(id) }))
+            .filter((r) => r.def);
+          faceList.innerHTML = "";
+          rows.forEach((row, i) => {
+            const el = document.createElement("div");
+            el.className = "face-row" + (row.on ? "" : " off");
+            el.innerHTML =
+              `<input type="checkbox" ${row.on ? "checked" : ""} title="Show this face" />` +
+              `<span class="swatch" style="background:${row.def.color}"></span>` +
+              `<span class="face-name">${row.def.name}</span>` +
+              `<button type="button" data-dir="-1" title="Move up">&#9650;</button>` +
+              `<button type="button" data-dir="1" title="Move down">&#9660;</button>`;
+            const pos = layout.indexOf(row.def.id);
+            const [up, down] = el.querySelectorAll("button");
+            up.disabled = pos <= 0;
+            down.disabled = pos >= layout.length - 1;
+            el.querySelector("input").addEventListener("change", (ev) => {
+              // Joins or leaves the rotation in place — its row does not move.
+              order = layout.filter((id) =>
+                id === row.def.id ? ev.target.checked : order.includes(id),
+              );
+              renderFaces();
+              saveOrder();
+            });
+            for (const btn of [up, down]) {
+              btn.addEventListener("click", () => {
+                const from = layout.indexOf(row.def.id);
+                const to = from + Number(btn.dataset.dir);
+                if (from < 0 || to < 0 || to >= layout.length) return;
+                layout.splice(to, 0, layout.splice(from, 1)[0]);
+                order = layout.filter((id) => order.includes(id)); // rotation follows
+                renderFaces();
+                saveOrder();
+              });
+            }
+            faceList.appendChild(el);
+          });
+          syncStartOptions(startSelect.value);
+        };
+
+        const loadFaces = async () => {
+          const { settings } = await SDPIComponents.streamDeckClient.getSettings();
+          order = readOrder(settings);
+          // Stored row order, with any face it doesn't mention appended, so a
+          // face added in a later version still shows up.
+          const saved = (settings.faceLayout || "").split(",").map((t) => t.trim());
+          const known = FACE_DEFS.map((f) => f.id);
+          layout = saved
+            .filter((id, i) => known.includes(id) && saved.indexOf(id) === i)
+            .concat(known.filter((id) => !saved.includes(id)));
+          renderFaces();
+          syncStartOptions(settings.carouselStart);
+        };
+        loadFaces();
+
+        const mItem = document.getElementById("badge-secs-item");
+        const mRange = document.getElementById("badge-secs-range");
+        const showBadgeSecs = () => {
+          const v = mRange.value != null && mRange.value !== "" ? mRange.value : 3;
+          mItem.setAttribute("label", `Badge for: ${v} s`);
+        };
+        mRange.addEventListener("input", showBadgeSecs);
+        mRange.addEventListener("change", showBadgeSecs);
 
         // "Reset colors": clear the four appearance settings so every face
         // falls back to the built-in look. The key repaints immediately;
@@ -263,6 +489,7 @@
         const t = setInterval(() => {
           applyVisibility();
           showInterval();
+          showBadgeSecs();
           showProfilePath();
           if (++tries >= 20) clearInterval(t);
         }, 250);
