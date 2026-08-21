@@ -118,7 +118,7 @@
     <sdpi-item label="Metric">
       <sdpi-select setting="metric" default="session" id="metric-select">
         <optgroup label="Limits — live (/usage)">
-          <option value="carousel">Carousel — 5h &#x2194; Weekly</option>
+          <option value="carousel">Carousel — rotating faces</option>
           <option value="session">Session (5h)</option>
           <option value="weekly">Weekly (7d)</option>
           <option value="model_weekly">Model weekly (7d)</option>
@@ -136,36 +136,6 @@
         </optgroup>
       </sdpi-select>
     </sdpi-item>
-
-    <details>
-      <summary>Appearance — colors for this key</summary>
-      <sdpi-item label="Background">
-        <sdpi-color setting="bg"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="Numbers">
-        <sdpi-color setting="textColor"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="Labels">
-        <sdpi-color setting="labelColor"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="Accent">
-        <sdpi-color setting="accentColor"></sdpi-color>
-      </sdpi-item>
-      <sdpi-item label="">
-        <small class="hint">
-          Colors for <b>this key only</b> (works on the Stream Deck + touch strip
-          too). <b>Background</b> is the whole tile. <b>Numbers</b> is the big
-          value (the % or token count). <b>Labels</b> is the title and the small
-          text under the value. <b>Accent</b> is the little underline, the chart
-          bars and the icons. Pickers you don't touch keep the built-in look.
-          The Carousel keeps its own face colors (set below) — only
-          <b>Background</b> applies to it.
-        </small>
-      </sdpi-item>
-      <sdpi-item label="">
-        <sdpi-button id="reset-colors">Reset colors to default</sdpi-button>
-      </sdpi-item>
-    </details>
 
     <!-- Carousel only -->
     <div class="group" id="group-carousel" hidden>
@@ -218,9 +188,9 @@
       </sdpi-item>
       <sdpi-item label="">
         <small class="hint">
-          The key alternates the <b>5-hour</b> and <b>weekly</b> faces every
-          <i>Interval</i> seconds; pressing the key switches immediately (works
-          even with auto-rotate off). <i>Starts on</i> picks the face the key
+          The key cycles through the ticked faces every <i>Interval</i> seconds;
+          pressing the key switches immediately (works even with auto-rotate
+          off). <i>Starts on</i> picks the face the key
           shows when it loads &mdash; turn <i>Auto-rotate</i> off (or drag
           <i>Interval</i> down to <i>never</i>) and it stays there, so two keys
           side by side can hold one window each. The <i>Badge</i> face is a
@@ -260,6 +230,36 @@
         </small>
       </sdpi-item>
     </div>
+
+    <details>
+      <summary>Appearance — colors for this key</summary>
+      <sdpi-item label="Background">
+        <sdpi-color setting="bg"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Numbers">
+        <sdpi-color setting="textColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Labels">
+        <sdpi-color setting="labelColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="Accent">
+        <sdpi-color setting="accentColor"></sdpi-color>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          Colors for <b>this key only</b> (works on the Stream Deck + touch strip
+          too). <b>Background</b> is the whole tile. <b>Numbers</b> is the big
+          value (the % or token count). <b>Labels</b> is the title and the small
+          text under the value. <b>Accent</b> is the little underline, the chart
+          bars and the icons. Pickers you don't touch keep the built-in look.
+          The Carousel keeps its own face colors (set below) — only
+          <b>Background</b> applies to it.
+        </small>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-button id="reset-colors">Reset colors to default</sdpi-button>
+      </sdpi-item>
+    </details>
 
     <!-- Live limit metrics (gauges and carousel) -->
     <div class="group" id="group-thresholds" hidden>
@@ -363,10 +363,15 @@
           { id: "weekly", name: "Weekly", color: "#38bdf8" },
           { id: "model_weekly", name: "Model weekly", color: "#818cf8" },
         ];
+        // The rotation a key starts life with: the two windows. The badge and
+        // the model face sit in the list unticked until the user wants them.
         const DEFAULT_ORDER = ["session", "weekly"];
         const faceList = document.getElementById("face-list");
         const startSelect = document.getElementById("carousel-start-select");
         let order = DEFAULT_ORDER.slice(); // the ticked ids, in rotation order
+        // Row order for the whole list, ticked or not. Persisted separately so
+        // an unticked face keeps its place instead of jumping when re-ticked.
+        let layout = FACE_DEFS.map((f) => f.id);
 
         const readOrder = (settings) => {
           const raw = (settings.faceOrder || "").trim();
@@ -377,6 +382,7 @@
         const saveOrder = async () => {
           const { settings } = await SDPIComponents.streamDeckClient.getSettings();
           settings.faceOrder = order.join(",");
+          settings.faceLayout = layout.join(","); // inspector-only: row order
           // Starting on a face that is no longer shown would silently fall back
           // to the first one; keep the stored value honest instead.
           if (settings.carouselStart && !order.includes(settings.carouselStart)) {
@@ -399,10 +405,12 @@
         };
 
         const renderFaces = () => {
-          // Ticked faces first, in order; the rest below, still reachable.
-          const rows = order
-            .map((id) => ({ def: FACE_DEFS.find((f) => f.id === id), on: true }))
-            .concat(FACE_DEFS.filter((f) => !order.includes(f.id)).map((def) => ({ def, on: false })))
+          // Every face has a row, in one stable order: `layout` is the whole
+          // list, `order` is just which of them are ticked. Ticking a face
+          // therefore never moves its row — it only joins the rotation where
+          // it already sits.
+          const rows = layout
+            .map((id) => ({ def: FACE_DEFS.find((f) => f.id === id), on: order.includes(id) }))
             .filter((r) => r.def);
           faceList.innerHTML = "";
           rows.forEach((row, i) => {
@@ -414,28 +422,25 @@
               `<span class="face-name">${row.def.name}</span>` +
               `<button type="button" data-dir="-1" title="Move up">&#9650;</button>` +
               `<button type="button" data-dir="1" title="Move down">&#9660;</button>`;
-            const pos = order.indexOf(row.def.id);
+            const pos = layout.indexOf(row.def.id);
             const [up, down] = el.querySelectorAll("button");
-            // Arrows only reorder the rotation, so they're inert on faces that
-            // aren't in it, and at the ends of the list.
-            up.disabled = !row.on || pos <= 0;
-            down.disabled = !row.on || pos < 0 || pos >= order.length - 1;
+            up.disabled = pos <= 0;
+            down.disabled = pos >= layout.length - 1;
             el.querySelector("input").addEventListener("change", (ev) => {
-              // The badge is a splash, so it joins at the front; anything else
-              // joins at the end. Either way the arrows can move it after.
-              if (ev.target.checked) {
-                if (row.def.id === "badge") order.unshift(row.def.id);
-                else order.push(row.def.id);
-              } else order = order.filter((id) => id !== row.def.id);
+              // Joins or leaves the rotation in place — its row does not move.
+              order = layout.filter((id) =>
+                id === row.def.id ? ev.target.checked : order.includes(id),
+              );
               renderFaces();
               saveOrder();
             });
             for (const btn of [up, down]) {
               btn.addEventListener("click", () => {
-                const from = order.indexOf(row.def.id);
+                const from = layout.indexOf(row.def.id);
                 const to = from + Number(btn.dataset.dir);
-                if (from < 0 || to < 0 || to >= order.length) return;
-                order.splice(to, 0, order.splice(from, 1)[0]);
+                if (from < 0 || to < 0 || to >= layout.length) return;
+                layout.splice(to, 0, layout.splice(from, 1)[0]);
+                order = layout.filter((id) => order.includes(id)); // rotation follows
                 renderFaces();
                 saveOrder();
               });
@@ -448,6 +453,13 @@
         const loadFaces = async () => {
           const { settings } = await SDPIComponents.streamDeckClient.getSettings();
           order = readOrder(settings);
+          // Stored row order, with any face it doesn't mention appended, so a
+          // face added in a later version still shows up.
+          const saved = (settings.faceLayout || "").split(",").map((t) => t.trim());
+          const known = FACE_DEFS.map((f) => f.id);
+          layout = saved
+            .filter((id, i) => known.includes(id) && saved.indexOf(id) === i)
+            .concat(known.filter((id) => !saved.includes(id)));
           renderFaces();
           syncStartOptions(settings.carouselStart);
         };
