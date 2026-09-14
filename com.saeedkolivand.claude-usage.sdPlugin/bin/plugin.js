@@ -17416,13 +17416,21 @@ function resolveProfile(configDir, extra = []) {
 function credentialsPath(configDir = defaultConfigDir()) {
   return (0, import_node_path6.join)(configDir, ".credentials.json");
 }
+function keychainService(configDir, isDefault) {
+  if (isDefault) return "Claude Code-credentials";
+  const h = (0, import_node_crypto3.createHash)("sha256").update((0, import_node_path6.resolve)(configDir).normalize("NFC")).digest("hex").slice(0, 8);
+  return `Claude Code-credentials-${h}`;
+}
 function readToken(profile) {
   const dir = profile?.configDir ?? defaultConfigDir();
   const isDefault = profile ? profile.isDefault : true;
   const fromFile = readTokenFromFile(credentialsPath(dir));
-  if (fromFile.token) return fromFile;
-  if (process.platform === "darwin" && isDefault) return readTokenFromKeychain();
-  return {};
+  if (fromFile.token && !fromFile.expired) return fromFile;
+  if (process.platform === "darwin") {
+    const fromKeychain = readTokenFromKeychain(keychainService(dir, isDefault));
+    if (fromKeychain.token) return fromKeychain;
+  }
+  return fromFile;
 }
 function parseCred(raw) {
   const j = JSON.parse(raw);
@@ -17439,13 +17447,12 @@ function readTokenFromFile(path5) {
     return {};
   }
 }
-function readTokenFromKeychain() {
+function readTokenFromKeychain(service) {
   try {
-    const out = (0, import_node_child_process.execFileSync)(
-      "security",
-      ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
-      { encoding: "utf8", timeout: 4e3 }
-    );
+    const out = (0, import_node_child_process.execFileSync)("security", ["find-generic-password", "-s", service, "-w"], {
+      encoding: "utf8",
+      timeout: 4e3
+    });
     return parseCred(out.trim());
   } catch {
     return {};
