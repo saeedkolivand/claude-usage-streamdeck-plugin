@@ -190,22 +190,47 @@ export function credentialsPath(configDir = defaultConfigDir()): string {
   return join(configDir, ".credentials.json");
 }
 
-/** File first, Keychain second — and the Keychain **only for the default
- *  profile**.
+/** The Keychain item Claude Code keeps a profile's OAuth credential in.
  *
- *  There is exactly one Keychain item, "Claude Code-credentials", with no
- *  per-profile variant. Falling back to it for a relocated profile would show
- *  another account's limit percentages under that profile's name: wrong, and
- *  invisibly so. */
+ *  Non-default profiles get their own item, suffixed with the first 8 hex
+ *  chars of sha256 over the NFC-normalized config dir — so falling back to the
+ *  Keychain for a relocated profile cannot show another account's numbers, the
+ *  hash binds the item to the directory. Verified against the CLI binary
+ *  (2.1.270), which builds the same name to write it.
+ *
+ *  Two known misses, both failing closed to the file: an internal CLI build
+ *  inserts a suffix after "Claude Code", and the CLI treats "default" as
+ *  CLAUDE_CONFIG_DIR being unset rather than the dir being ~/.claude. */
+export function keychainService(configDir: string, isDefault: boolean): string {
+  if (isDefault) return "Claude Code-credentials";
+  const h = createHash("sha256")
+    .update(resolve(configDir).normalize("NFC"))
+    .digest("hex")
+    .slice(0, 8);
+  return `Claude Code-credentials-${h}`;
+}
+
+/** A usable file token first, Keychain second, the file's expired token last.
+ *
+ *  The Keychain is the CLI's live store on macOS; .credentials.json can sit
+ *  there for months holding a refresh token the server has long since rotated
+ *  away, which every refresh attempt then burns a cooldown on. Reaching past
+ *  an expired file token is the whole point — stopping at one is what pinned
+ *  relocated profiles to a permanent "--". */
 export function readToken(profile?: Profile): { token?: string; expired?: boolean } {
   const dir = profile?.configDir ?? defaultConfigDir();
   const isDefault = profile ? profile.isDefault : true;
 
   const fromFile = readTokenFromFile(credentialsPath(dir));
-  if (fromFile.token) return fromFile;
+  if (fromFile.token && !fromFile.expired) return fromFile;
 
-  if (process.platform === "darwin" && isDefault) return readTokenFromKeychain();
-  return {};
+  if (process.platform === "darwin") {
+    const fromKeychain = readTokenFromKeychain(keychainService(dir, isDefault));
+    if (fromKeychain.token) return fromKeychain;
+  }
+  // Unchanged on the failure path: the expired token still reaches the
+  // refresh-then-render logic exactly as it did before.
+  return fromFile;
 }
 
 function parseCred(raw: string): { token?: string; expired?: boolean } {
@@ -225,13 +250,12 @@ function readTokenFromFile(path: string): { token?: string; expired?: boolean } 
   }
 }
 
-function readTokenFromKeychain(): { token?: string; expired?: boolean } {
+function readTokenFromKeychain(service: string): { token?: string; expired?: boolean } {
   try {
-    const out = execFileSync(
-      "security",
-      ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
-      { encoding: "utf8", timeout: 4000 },
-    );
+    const out = execFileSync("security", ["find-generic-password", "-s", service, "-w"], {
+      encoding: "utf8",
+      timeout: 4000,
+    });
     return parseCred(out.trim());
   } catch {
     return {};

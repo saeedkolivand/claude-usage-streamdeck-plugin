@@ -7,7 +7,8 @@ import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { join, resolve } from "node:path";
 
 import {
   discoverProfiles,
@@ -16,6 +17,7 @@ import {
   planLabel,
   projectsDir,
   credentialsPath,
+  keychainService,
 } from "../src/usage-core";
 
 let home: string;
@@ -151,5 +153,27 @@ describe("paths", () => {
     assert.equal(planLabel("claude_pro"), "Pro");
     assert.equal(planLabel("something_else"), undefined);
     assert.equal(planLabel(undefined), undefined);
+  });
+});
+
+describe("keychain service name", () => {
+  test("default profile keeps the unsuffixed item", () => {
+    assert.equal(keychainService("/x/.claude", true), "Claude Code-credentials");
+  });
+
+  test("relocated profile gets the CLI's per-profile item", () => {
+    // Recomputed here rather than imported: this string is a contract with
+    // Claude Code, and a silent drift in it is exactly the bug being fixed.
+    const dir = resolve("/x/.claude-work");
+    const h = createHash("sha256").update(dir.normalize("NFC")).digest("hex").slice(0, 8);
+    assert.equal(keychainService(dir, false), `Claude Code-credentials-${h}`);
+    assert.match(keychainService(dir, false), /^Claude Code-credentials-[0-9a-f]{8}$/);
+  });
+
+  test("different dirs never collide", () => {
+    assert.notEqual(
+      keychainService("/x/.claude-work", false),
+      keychainService("/x/.claude-personal", false),
+    );
   });
 });
