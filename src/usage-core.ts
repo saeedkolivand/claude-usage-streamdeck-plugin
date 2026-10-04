@@ -1153,13 +1153,20 @@ function iconMarkup(icon: FaceIcon, x: number, y: number, sizePx: number, stroke
 
 // The carousel's page-dot strip, shared by every carousel face so the dots
 // never drift apart between them.
-function pageDots(face: number | undefined, faces: number | undefined, accent: string, cx: number): string {
+function pageDots(
+  face: number | undefined,
+  faces: number | undefined,
+  accent: string,
+  cx: number,
+  cy = 138,
+  gap = 14,
+  r = 3.5,
+): string {
   if (!faces || faces <= 1) return "";
-  const gap = 14;
   const x0 = cx - ((faces - 1) * gap) / 2;
   let out = "";
   for (let i = 0; i < faces; i++) {
-    out += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (face ?? 0) ? accent : "#4b5563"}"/>`;
+    out += `<circle cx="${x0 + i * gap}" cy="${cy}" r="${r}" fill="${i === (face ?? 0) ? accent : "#4b5563"}"/>`;
   }
   return out;
 }
@@ -1465,5 +1472,195 @@ export function svgDial(opts: {
   <text x="14" y="88" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${opts.stale ? "#f59e0b" : opts.muted || "#9ca3af"}">${esc(opts.sub)}</text>
   ${right}
   ${opts.stale ? `<circle cx="190" cy="11" r="3.5" fill="#f59e0b"/>` : ""}
+</svg>`;
+}
+
+// ---------------------------------------------------------------------------
+// Stream Deck Neo infobar
+//
+// The strip under the Neo's keys: 232x50 and no input. One full-size pixmap
+// owns it (layouts/infobar.json), drawn here so the strip carries the key
+// carousel's faces. The carousel's badge slot becomes a summary there: the
+// width fits every window at once, which a key never could.
+
+export type InfobarSettings = {
+  infoIcon?: boolean; // face icon beside the label
+  infoBar?: boolean; // progress bar
+  infoCountdown?: boolean; // time until the window resets
+  infoDots?: boolean; // carousel page dots
+  infoSumSession?: boolean; // windows the summary face lays out side by side
+  infoSumWeekly?: boolean;
+  infoSumModel?: boolean; // the model window is opt-in
+};
+
+/** Which parts of an infobar face are drawn. */
+export type InfobarShow = { icon: boolean; bar: boolean; countdown: boolean; dots: boolean };
+
+/** A checkbox setting: unset keeps the default; sdpi may hand back "false". */
+function flag(v: unknown, d: boolean): boolean {
+  return v == null || v === "" ? d : String(v) !== "false";
+}
+
+export function infobarShow(s: InfobarSettings): InfobarShow {
+  return {
+    icon: flag(s.infoIcon, true),
+    bar: flag(s.infoBar, true),
+    countdown: flag(s.infoCountdown, true),
+    dots: flag(s.infoDots, true),
+  };
+}
+
+/** The windows the summary face lays out, in FACES order. */
+export function summaryFaces(s: InfobarSettings): Face[] {
+  const want: Record<string, boolean> = {
+    session: flag(s.infoSumSession, true),
+    weekly: flag(s.infoSumWeekly, true),
+    model_weekly: flag(s.infoSumModel, false),
+  };
+  return FACES.filter((f) => want[f.id]);
+}
+
+/** The strip can't flash, so a window crossing Red pulls the carousel to its
+ *  face instead. Every number face in the rotation is checked, not just the one
+ *  on screen — the point is to surface the window that isn't showing. Fires
+ *  once per crossing (the latch re-arms when the window drops below Red) and
+ *  returns the face to jump to, or null. */
+export function alertJump(
+  order: Face[],
+  pcts: Record<string, number | null>,
+  crit: number,
+  latch: Map<string, boolean>,
+  prefix: string,
+): number | null {
+  let jump: number | null = null;
+  order.forEach((f, i) => {
+    if (!f.metric) return; // the badge reads no window
+    const k = prefix + f.metric;
+    const pct = pcts[f.metric];
+    const above = pct != null && pct >= crit;
+    if (above && !latch.get(k) && jump == null) jump = i;
+    latch.set(k, above);
+  });
+  return jump;
+}
+
+/** Seconds a jumped-to face holds before the rotation resumes: one interval.
+ *  The slider's "never" (0) would otherwise make it a blink. */
+export function jumpHoldSec(s: CarouselSettings): number {
+  const sec = numOr(s.carouselSec, 10);
+  return sec > 0 ? Math.min(3600, Math.max(1, sec)) : 10;
+}
+
+// Page dots ride the top-right corner, last dot at x=220.
+const INFOBAR_DOT_GAP = 8;
+function infobarDots(face: number | undefined, faces: number | undefined, accent: string): string {
+  const n = faces ?? 0;
+  return pageDots(face, faces, accent, 220 - ((n - 1) * INFOBAR_DOT_GAP) / 2, 10, INFOBAR_DOT_GAP, 2);
+}
+/** Where text on the right has to stop so it never runs into the dots. */
+function infobarTextEnd(dots: string, faces: number | undefined): number {
+  return dots ? 220 - ((faces ?? 1) - 1) * INFOBAR_DOT_GAP - 8 : 224;
+}
+
+/** A number face: the % on the left; label, bar and countdown on the right. */
+export function svgInfobar(opts: {
+  label: string;
+  pct: number | null;
+  note: string;
+  col: string;
+  stale: boolean;
+  bg?: string;
+  face?: number;
+  faces?: number;
+  accent?: string;
+  icon?: FaceIcon;
+  noteCol?: string;
+  show: InfobarShow;
+}): string {
+  const accent = opts.accent || "#9ca3af";
+  const pctNum = opts.pct == null ? "--" : `${Math.round(opts.pct)}`;
+  const pctSize = pctNum.length >= 3 ? 30 : 34; // "100" steps down to stay clear of the right column
+  const x0 = 84;
+  const barW = 224 - x0;
+  const dots = opts.show.dots ? infobarDots(opts.face, opts.faces, accent) : "";
+  const icon = opts.show.icon && opts.icon ? iconMarkup(opts.icon, x0, 4, 12, accent) : "";
+  const labelX = icon ? x0 + 16 : x0;
+  // 1.5px of letter-spacing per glyph on top of the estimated advance width.
+  const labelAvail = infobarTextEnd(dots, opts.faces) - labelX;
+  let labelSize = 11;
+  while (labelSize > 8 && textWidthEm(opts.label) * labelSize * 1.08 + opts.label.length * 1.5 > labelAvail) labelSize -= 1;
+  let noteSize = 12;
+  while (noteSize > 9 && textWidthEm(opts.note) * noteSize * 1.08 > barW) noteSize -= 1;
+
+  const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
+  const fillW = (p / 100) * barW;
+  const bar = opts.show.bar
+    ? `<rect x="${x0}" y="21" width="${barW}" height="8" rx="4" fill="#2a313d"/>` +
+      (fillW > 0 ? `<rect x="${x0}" y="21" width="${fillW.toFixed(1)}" height="8" rx="4" fill="${opts.col}"/>` : "")
+    : "";
+  const note =
+    opts.show.countdown && opts.note
+      ? `<text x="${x0}" y="44" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${opts.stale ? "#f59e0b" : opts.noteCol || "#e5e7eb"}">${esc(opts.note)}</text>`
+      : "";
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50">
+  <rect width="232" height="50" fill="${opts.bg || "#0f1216"}"/>
+  <text x="8" y="39" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>
+  ${icon}
+  <text x="${labelX}" y="14" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" letter-spacing="1.5" fill="${accent}">${esc(opts.label)}</text>
+  ${dots}
+  ${bar}
+  ${note}
+</svg>`;
+}
+
+/** The summary face: one column per window the user ticked (1–3), each with
+ *  its label, % and bar, so every window reads at a glance. Countdowns and page
+ *  dots stay on the number faces — three columns leave no room for them. */
+export function svgInfobarSummary(opts: {
+  bg?: string;
+  show: InfobarShow;
+  cols: { label: string; pct: number | null; col: string; accent: string; icon: FaceIcon }[];
+}): string {
+  const n = opts.cols.length;
+  let body: string;
+  if (!n) {
+    // Nothing ticked: the plugin's mark, rather than an empty strip.
+    body = iconMarkup("badge", 116 - 21, 4, 42, BADGE_COLOR);
+  } else {
+    const colW = 232 / n;
+    const pad = 5;
+    const w = colW - 2 * pad;
+    const pctSize = n >= 3 ? 20 : 22;
+    body = opts.cols
+      .map((c, i) => {
+        const x0 = i * colW + pad;
+        const divider = i ? `<rect x="${(i * colW - 0.5).toFixed(1)}" y="8" width="1" height="34" fill="#2a313d"/>` : "";
+        // The label gets the whole top row — at three columns that row is the
+        // tightest spot on the strip — so the icon sits beside the % instead.
+        let labelSize = 12;
+        while (labelSize > 9 && textWidthEm(c.label) * labelSize * 1.08 > w) labelSize -= 1;
+        const icon = opts.show.icon ? iconMarkup(c.icon, x0, 22, 14, c.accent) : "";
+        const pctX = icon ? x0 + 18 : x0;
+        const pctNum = c.pct == null ? "--" : `${Math.round(c.pct)}`;
+        const p = c.pct == null ? 0 : Math.max(0, Math.min(100, c.pct));
+        const fillW = (p / 100) * w;
+        const bar = opts.show.bar
+          ? `<rect x="${x0.toFixed(1)}" y="42" width="${w.toFixed(1)}" height="4" rx="2" fill="#2a313d"/>` +
+            (fillW > 0 ? `<rect x="${x0.toFixed(1)}" y="42" width="${fillW.toFixed(1)}" height="4" rx="2" fill="${c.col}"/>` : "")
+          : "";
+        return (
+          divider +
+          `<text x="${x0.toFixed(1)}" y="13" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${c.accent}">${esc(c.label)}</text>` +
+          icon +
+          `<text x="${pctX.toFixed(1)}" y="36" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${c.col}">${esc(pctNum)}${c.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>` +
+          bar
+        );
+      })
+      .join("\n  ");
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50">
+  <rect width="232" height="50" fill="${opts.bg || "#0f1216"}"/>
+  ${body}
 </svg>`;
 }

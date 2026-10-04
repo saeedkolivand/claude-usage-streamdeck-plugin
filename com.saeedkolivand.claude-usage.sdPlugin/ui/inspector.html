@@ -115,6 +115,7 @@
       </small>
     </sdpi-item>
 
+    <div class="group" id="group-metric">
     <sdpi-item label="Metric">
       <sdpi-select setting="metric" default="session" id="metric-select">
         <optgroup label="Limits — live (/usage)">
@@ -136,6 +137,7 @@
         </optgroup>
       </sdpi-select>
     </sdpi-item>
+    </div>
 
     <!-- Carousel only -->
     <div class="group" id="group-carousel" hidden>
@@ -180,12 +182,14 @@
       <sdpi-item label="Badge for: 3 s" id="badge-secs-item">
         <sdpi-range setting="badgeSec" min="1" max="30" step="1" default="3" showlabels id="badge-secs-range"></sdpi-range>
       </sdpi-item>
+      <div class="group" id="group-badge-art">
       <sdpi-item label="Badge image">
         <sdpi-file setting="badgeImage" accept="image/png, image/jpeg, image/gif, image/webp, image/svg+xml"></sdpi-file>
       </sdpi-item>
       <sdpi-item label="Badge caption">
         <sdpi-textfield setting="badgeLabel" placeholder="(none)" maxlength="12"></sdpi-textfield>
       </sdpi-item>
+      </div>
       <sdpi-item label="">
         <small class="hint">
           The key cycles through the ticked faces every <i>Interval</i> seconds;
@@ -200,6 +204,40 @@
           <code>5 HORAS</code> / <code>SEMANAL</code>. The %, bar and countdown
           tones derive from the base color; past the Amber/Red thresholds the %
           and bar switch to the alert colors.
+        </small>
+      </sdpi-item>
+    </div>
+
+    <!-- Stream Deck Neo infobar only -->
+    <div class="group" id="group-infobar" hidden>
+      <sdpi-item label="Show">
+        <sdpi-checkbox setting="infoIcon" default="true" label="Icon"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-checkbox setting="infoBar" default="true" label="Bar"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-checkbox setting="infoCountdown" default="true" label="Time until reset"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-checkbox setting="infoDots" default="true" label="Page dots"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="Summary of">
+        <sdpi-checkbox setting="infoSumSession" default="true" label="5-hour session"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-checkbox setting="infoSumWeekly" default="true" label="Weekly"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="">
+        <sdpi-checkbox setting="infoSumModel" label="Model weekly"></sdpi-checkbox>
+      </sdpi-item>
+      <sdpi-item label="">
+        <small class="hint">
+          The <b>Summary</b> face lays the ticked windows side by side, each
+          with its % and bar. The infobar takes no input, so with
+          <i>Auto-rotate</i> off it holds the <i>Starts on</i> face. Instead of
+          a flash, <b>Alert</b> jumps to the window that crossed Red, holds it
+          for one interval, then goes back to the rotation.
         </small>
       </sdpi-item>
     </div>
@@ -236,6 +274,7 @@
       <sdpi-item label="Background">
         <sdpi-color setting="bg"></sdpi-color>
       </sdpi-item>
+      <div class="group" id="group-colors">
       <sdpi-item label="Numbers">
         <sdpi-color setting="textColor"></sdpi-color>
       </sdpi-item>
@@ -245,6 +284,7 @@
       <sdpi-item label="Accent">
         <sdpi-color setting="accentColor"></sdpi-color>
       </sdpi-item>
+      </div>
       <sdpi-item label="">
         <small class="hint">
           Colors for <b>this key only</b> (works on the Stream Deck + touch strip
@@ -320,12 +360,25 @@
             m.startsWith("tokens_") || m.startsWith("cost_") || m.startsWith("hist_") || m === "burn",
           "group-thresholds": (m) => m === "carousel" || m === "session" || m === "weekly" || m === "model_weekly",
         };
+        // The Neo infobar shares this inspector but is always a carousel: no
+        // metric picker, no per-metric colors, plus its own group.
+        let infobar = false;
         const applyVisibility = () => {
-          const m = select.value || "session";
+          const m = infobar ? "carousel" : select.value || "session";
           for (const [id, visible] of Object.entries(groups)) {
             document.getElementById(id).hidden = !visible(m);
           }
+          document.getElementById("group-metric").hidden = infobar;
+          document.getElementById("group-colors").hidden = infobar;
+          document.getElementById("group-badge-art").hidden = infobar;
+          document.getElementById("group-infobar").hidden = !infobar;
         };
+        SDPIComponents.streamDeckClient.getConnectionInfo().then(({ actionInfo }) => {
+          infobar = actionInfo?.action === "com.saeedkolivand.claude-usage.infobar";
+          applyVisibility();
+          renderFaces(); // the badge row reads "Summary" there
+          showBadgeSecs();
+        });
         select.addEventListener("input", applyVisibility); // composed, crosses the shadow DOM
         select.addEventListener("change", applyVisibility);
 
@@ -397,7 +450,8 @@
           startSelect.innerHTML = want
             .map((id) => {
               const f = FACE_DEFS.find((d) => d.id === id);
-              return `<option value="${id}">${f ? f.name : id}</option>`;
+              const name = infobar && id === "badge" ? "Summary" : f ? f.name : id;
+              return `<option value="${id}">${name}</option>`;
             })
             .join("");
           const pick = current && want.includes(current) ? current : want[0];
@@ -416,10 +470,12 @@
           rows.forEach((row, i) => {
             const el = document.createElement("div");
             el.className = "face-row" + (row.on ? "" : " off");
+            // On the infobar the badge slot draws the summary instead.
+            const name = infobar && row.def.id === "badge" ? "Summary" : row.def.name;
             el.innerHTML =
               `<input type="checkbox" ${row.on ? "checked" : ""} title="Show this face" />` +
               `<span class="swatch" style="background:${row.def.color}"></span>` +
-              `<span class="face-name">${row.def.name}</span>` +
+              `<span class="face-name">${name}</span>` +
               `<button type="button" data-dir="-1" title="Move up">&#9650;</button>` +
               `<button type="button" data-dir="1" title="Move down">&#9660;</button>`;
             const pos = layout.indexOf(row.def.id);
@@ -469,7 +525,7 @@
         const mRange = document.getElementById("badge-secs-range");
         const showBadgeSecs = () => {
           const v = mRange.value != null && mRange.value !== "" ? mRange.value : 3;
-          mItem.setAttribute("label", `Badge for: ${v} s`);
+          mItem.setAttribute("label", `${infobar ? "Summary" : "Badge"} for: ${v} s`);
         };
         mRange.addEventListener("input", showBadgeSecs);
         mRange.addEventListener("change", showBadgeSecs);

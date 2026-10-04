@@ -16,6 +16,7 @@ import {
   resolveProfile,
   type Profile,
   type LogStats,
+  type FetchResult,
   fetchUsage,
   pickMetric,
   untilText,
@@ -37,6 +38,13 @@ import {
   svgBadge,
   svgSpark,
   svgDial,
+  type InfobarSettings,
+  infobarShow,
+  summaryFaces,
+  alertJump,
+  jumpHoldSec,
+  svgInfobar,
+  svgInfobarSummary,
   burnRate,
   burnNote,
   readHistory,
@@ -71,7 +79,7 @@ type Settings = {
   accentColor?: string; // identity accent (ticks, bars, icons) override
   textColor?: string; // big value / number color override
   labelColor?: string; // label and sub-line color override
-};
+} & InfobarSettings;
 
 /** A user color when it's a valid hex, else undefined (= built-in default). */
 function hexOf(v?: string): string | undefined {
@@ -189,7 +197,8 @@ function badgeImage(path?: string): string | undefined {
 // (Re)arm the auto-rotate timer to match the key's settings; tears everything
 // down when the key is no longer a carousel.
 function syncCarousel(act: any, s: Settings): void {
-  const isCarousel = (s.metric || "session") === "carousel";
+  // The Neo infobar has no metric picker: it is always a carousel.
+  const isCarousel = act.isNeoInfobar?.() || (s.metric || "session") === "carousel";
   const st = carousel.get(act.id);
   if (st?.timer) clearTimeout(st.timer);
   if (!isCarousel) {
@@ -229,6 +238,8 @@ function profileFor(s: Settings): Profile | null {
 }
 
 async function draw(act: any, s: Settings): Promise<void> {
+  // The Neo infobar has setFeedback too, so it has to be told apart first.
+  if (act.isNeoInfobar?.()) return drawInfobar(act, s);
   // Encoders (Stream Deck + dials) render to the touch strip, not a key face.
   if (typeof act.setFeedback === "function") return drawDial(act, s);
   const metric = s.metric || "session";
@@ -396,11 +407,41 @@ async function drawDial(act: any, s: Settings): Promise<void> {
   });
 }
 
-async function drawCarousel(act: any, s: Settings): Promise<void> {
-  const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
-  const { data, error, stale } = await fetchUsage(ua, false, profileFor(s) ?? undefined); // per-profile cache
+// What a carousel number face reads — shared by the key and the Neo infobar.
+function numberFace(f: Face, s: Settings, res: FetchResult) {
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
+  // Per-key label and color overrides for each face; empty = built-in default.
+  const label = (faceLabelOf(f, s) || "").trim() || f.label;
+  const pal = facePalette(f, s);
+  const look = { accent: pal.accent, icon: f.icon, noteCol: pal.noteCol };
+
+  if (!res.data) {
+    const note =
+      res.error === "no-token" || res.error === "token-expired"
+        ? "open Claude"
+        : res.error === "network"
+          ? "offline"
+          : "…";
+    return { label, pct: null, note, col: color(null, warn, crit), stale: true, ...look };
+  }
+
+  const { label: apiLabel, pct, resetsAt } = pickMetric(res.data, f.metric);
+  // The model face is named by the API after the account's model ("Fable"),
+  // which beats a generic "MODEL" — a custom label still wins over both.
+  const shown =
+    f.id === "model_weekly" && !(faceLabelOf(f, s) || "").trim() && apiLabel
+      ? apiLabel.toUpperCase()
+      : label;
+  const note = pct == null ? "n/a here" : untilText(resetsAt);
+  // Family tone while healthy; semantic amber/red once past the thresholds.
+  const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
+  return { label: shown, pct, note, col, stale: !!res.stale, ...look };
+}
+
+async function drawCarousel(act: any, s: Settings): Promise<void> {
+  const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
+  const res = await fetchUsage(ua, false, profileFor(s) ?? undefined); // per-profile cache
   const order = faceOrder(s);
   const faces = order.length;
   const face = (carousel.get(act.id)?.face ?? startFace(s)) % faces;
@@ -420,47 +461,53 @@ async function drawCarousel(act: any, s: Settings): Promise<void> {
     );
     return;
   }
-  // Per-key label and color overrides for each face; empty = built-in default.
-  const label = (faceLabelOf(f, s) || "").trim() || f.label;
-  const pal = facePalette(f, s);
+  const v = numberFace(f, s, res);
+  if (res.data) maybeAlert(act, s, f.metric, v.pct, num(s.crit, 80));
+  await act.setImage(toDataUri(svgBig({ ...v, bg: bgOf(s), face, faces })));
+}
 
-  if (!data) {
-    const note =
-      error === "no-token" || error === "token-expired"
-        ? "open Claude"
-        : error === "network"
-          ? "offline"
-          : "…";
-    await act.setImage(
-      toDataUri(
-        svgBig({
-          label, pct: null, note, col: color(null, warn, crit), stale: true, bg: bgOf(s),
-          face, faces, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
-        }),
-      ),
-    );
+// Show `face` for one interval after a Red crossing, then hand back to the
+// rotation as configured: auto-rotate carries on from there, a pinned infobar
+// returns to its own face.
+function holdFace(act: any, s: Settings, face: number): void {
+  const st = carousel.get(act.id) ?? { face: startFace(s), start: s.carouselStart };
+  if (st.timer) clearTimeout(st.timer);
+  st.face = face;
+  carousel.set(act.id, st);
+  if (carouselAuto(s)) {
+    syncCarousel(act, s); // arms the next step a face-interval from now
     return;
   }
+  st.timer = setTimeout(() => {
+    st.timer = undefined;
+    st.face = startFace(s);
+    draw(act, s).catch(() => {});
+  }, jumpHoldSec(s) * 1000);
+}
 
-  const { label: apiLabel, pct, resetsAt } = pickMetric(data, f.metric);
-  maybeAlert(act, s, f.metric, pct, crit);
-  // The model face is named by the API after the account's model ("Fable"),
-  // which beats a generic "MODEL" — a custom label still wins over both.
-  const shown =
-    f.id === "model_weekly" && !(faceLabelOf(f, s) || "").trim() && apiLabel
-      ? apiLabel.toUpperCase()
-      : label;
-  const note = pct == null ? "n/a here" : untilText(resetsAt);
-  // Family tone while healthy; semantic amber/red once past the thresholds.
-  const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
-  await act.setImage(
-    toDataUri(
-      svgBig({
-        label: shown, pct, note, col, stale: !!stale, bg: bgOf(s),
-        face, faces, accent: pal.accent, icon: f.icon, noteCol: pal.noteCol,
-      }),
-    ),
-  );
+// Stream Deck Neo infobar: the key carousel, on the 232x50 strip.
+async function drawInfobar(act: any, s: Settings): Promise<void> {
+  const ua = (s.userAgent && s.userAgent.trim()) || DEFAULT_UA;
+  const res = await fetchUsage(ua, false, profileFor(s) ?? undefined); // per-profile cache
+  const order = faceOrder(s);
+  const data = res.data;
+  // The strip can't flash; a window crossing Red pulls the rotation to it.
+  if (data && String(s.alertFlash) !== "false") {
+    const pcts = Object.fromEntries(
+      order.filter((f) => f.metric).map((f) => [f.metric, pickMetric(data, f.metric).pct]),
+    );
+    const jump = alertJump(order, pcts, num(s.crit, 80), alerted, act.id + ":");
+    if (jump != null) holdFace(act, s, jump);
+  }
+  const faces = order.length;
+  const face = (carousel.get(act.id)?.face ?? startFace(s)) % faces;
+  const f = order[face];
+  // The carousel's badge slot is the summary here: every ticked window at once.
+  const svg =
+    f.id === "badge"
+      ? svgInfobarSummary({ bg: bgOf(s), show: infobarShow(s), cols: summaryFaces(s).map((sf) => numberFace(sf, s, res)) })
+      : svgInfobar({ ...numberFace(f, s, res), bg: bgOf(s), face, faces, show: infobarShow(s) });
+  await act.setFeedback({ canvas: toDataUri(svg) });
 }
 
 async function drawGauge(act: any, s: Settings, metric: string): Promise<void> {
@@ -684,8 +731,20 @@ class UsageDial extends SingletonAction<Settings> {
   }
 }
 
+// Stream Deck Neo infobar: the meter's carousel on the strip under the keys.
+// The strip takes no input, so the meter's key press never reaches it; all it
+// adds is the layout, which the manifest can't declare for a Neo controller.
+@action({ UUID: "com.saeedkolivand.claude-usage.infobar" })
+class UsageInfobar extends UsageMeter {
+  override async onWillAppear(ev: WillAppearEvent<Settings>): Promise<void> {
+    if (ev.action.isNeoInfobar()) await ev.action.setFeedbackLayout("layouts/infobar.json");
+    await super.onWillAppear(ev);
+  }
+}
+
 streamDeck.actions.registerAction(new UsageMeter());
 streamDeck.actions.registerAction(new UsageDial());
+streamDeck.actions.registerAction(new UsageInfobar());
 streamDeck.connect();
 
 // Populate shortly after connect, then poll once a minute.

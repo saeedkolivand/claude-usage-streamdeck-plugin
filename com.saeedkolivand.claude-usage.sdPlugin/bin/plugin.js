@@ -3957,13 +3957,15 @@ var EventEmitter = class {
   }
 };
 
-// node_modules/@elgato/utils/dist/objects.js
+// node_modules/@elgato/utils/dist/objects/freeze.js
 function freeze(value) {
   if (value !== void 0 && value !== null && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
     Object.values(value).forEach(freeze);
   }
 }
+
+// node_modules/@elgato/utils/dist/objects/get.js
 function get(source, path5) {
   const props = path5.split(".");
   return props.reduce((obj, prop) => obj && obj[prop], source);
@@ -4867,12 +4869,12 @@ var NEVER = Object.freeze({
 // @__NO_SIDE_EFFECTS__
 function $constructor(name, initializer2, params) {
   function init(inst, def) {
-    var _a3;
+    var _a4;
     Object.defineProperty(inst, "_zod", {
       value: inst._zod ?? {},
       enumerable: false
     });
-    (_a3 = inst._zod).traits ?? (_a3.traits = /* @__PURE__ */ new Set());
+    (_a4 = inst._zod).traits ?? (_a4.traits = /* @__PURE__ */ new Set());
     inst._zod.traits.add(name);
     initializer2(inst, def);
     for (const k in _.prototype) {
@@ -4887,10 +4889,10 @@ function $constructor(name, initializer2, params) {
   }
   Object.defineProperty(Definition, "name", { value: name });
   function _(def) {
-    var _a3;
+    var _a4;
     const inst = params?.Parent ? new Definition() : this;
     init(inst, def);
-    (_a3 = inst._zod).deferred ?? (_a3.deferred = []);
+    (_a4 = inst._zod).deferred ?? (_a4.deferred = []);
     for (const fn of inst._zod.deferred) {
       fn();
     }
@@ -5000,10 +5002,10 @@ function jsonStringifyReplacer(_, value) {
   return value;
 }
 function cached(getter) {
-  const set2 = false;
+  const set3 = false;
   return {
     get value() {
-      if (!set2) {
+      if (!set3) {
         const value = getter();
         Object.defineProperty(this, "value", { value });
         return value;
@@ -5029,10 +5031,10 @@ function floatSafeRemainder(val, step) {
   return valInt % stepInt / 10 ** decCount;
 }
 function defineLazy(object2, key, getter) {
-  const set2 = false;
+  const set3 = false;
   Object.defineProperty(object2, key, {
     get() {
-      if (!set2) {
+      if (!set3) {
         const value = getter();
         object2[key] = value;
         return value;
@@ -5381,8 +5383,8 @@ function aborted(x, startIndex = 0) {
 }
 function prefixIssues(path5, issues) {
   return issues.map((iss) => {
-    var _a3;
-    (_a3 = iss).path ?? (_a3.path = []);
+    var _a4;
+    (_a4 = iss).path ?? (_a4.path = []);
     iss.path.unshift(path5);
     return iss;
   });
@@ -5521,7 +5523,7 @@ function treeifyError(error40, _mapper) {
   };
   const result = { errors: [] };
   const processError = (error41, path5 = []) => {
-    var _a3, _b;
+    var _a4, _b;
     for (const issue2 of error41.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, issue2.path));
@@ -5542,7 +5544,7 @@ function treeifyError(error40, _mapper) {
           const terminal = i === fullpath.length - 1;
           if (typeof el === "string") {
             curr.properties ?? (curr.properties = {});
-            (_a3 = curr.properties)[el] ?? (_a3[el] = { errors: [] });
+            (_a4 = curr.properties)[el] ?? (_a4[el] = { errors: [] });
             curr = curr.properties[el];
           } else {
             curr.items ?? (curr.items = []);
@@ -5755,10 +5757,10 @@ var uppercase = /^[^a-z]*$/;
 
 // node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
-  var _a3;
+  var _a4;
   inst._zod ?? (inst._zod = {});
   inst._zod.def = def;
-  (_a3 = inst._zod).onattach ?? (_a3.onattach = []);
+  (_a4 = inst._zod).onattach ?? (_a4.onattach = []);
 });
 var numericOriginMap = {
   number: "number",
@@ -5824,8 +5826,8 @@ var $ZodCheckGreaterThan = /* @__PURE__ */ $constructor("$ZodCheckGreaterThan", 
 var $ZodCheckMultipleOf = /* @__PURE__ */ $constructor("$ZodCheckMultipleOf", (inst, def) => {
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
-    var _a3;
-    (_a3 = inst2._zod.bag).multipleOf ?? (_a3.multipleOf = def.value);
+    var _a4;
+    (_a4 = inst2._zod.bag).multipleOf ?? (_a4.multipleOf = def.value);
   });
   inst._zod.check = (payload) => {
     if (typeof payload.value !== typeof def.value)
@@ -5951,9 +5953,9 @@ var $ZodCheckBigIntFormat = /* @__PURE__ */ $constructor("$ZodCheckBigIntFormat"
   };
 });
 var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, def) => {
-  var _a3;
+  var _a4;
   $ZodCheck.init(inst, def);
-  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
+  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -5978,9 +5980,9 @@ var $ZodCheckMaxSize = /* @__PURE__ */ $constructor("$ZodCheckMaxSize", (inst, d
   };
 });
 var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, def) => {
-  var _a3;
+  var _a4;
   $ZodCheck.init(inst, def);
-  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
+  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -6005,9 +6007,9 @@ var $ZodCheckMinSize = /* @__PURE__ */ $constructor("$ZodCheckMinSize", (inst, d
   };
 });
 var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (inst, def) => {
-  var _a3;
+  var _a4;
   $ZodCheck.init(inst, def);
-  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
+  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.size !== void 0;
   });
@@ -6035,9 +6037,9 @@ var $ZodCheckSizeEquals = /* @__PURE__ */ $constructor("$ZodCheckSizeEquals", (i
   };
 });
 var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (inst, def) => {
-  var _a3;
+  var _a4;
   $ZodCheck.init(inst, def);
-  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
+  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6064,9 +6066,9 @@ var $ZodCheckMaxLength = /* @__PURE__ */ $constructor("$ZodCheckMaxLength", (ins
   };
 });
 var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (inst, def) => {
-  var _a3;
+  var _a4;
   $ZodCheck.init(inst, def);
-  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
+  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6093,9 +6095,9 @@ var $ZodCheckMinLength = /* @__PURE__ */ $constructor("$ZodCheckMinLength", (ins
   };
 });
 var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals", (inst, def) => {
-  var _a3;
+  var _a4;
   $ZodCheck.init(inst, def);
-  (_a3 = inst._zod.def).when ?? (_a3.when = (payload) => {
+  (_a4 = inst._zod.def).when ?? (_a4.when = (payload) => {
     const val = payload.value;
     return !nullish(val) && val.length !== void 0;
   });
@@ -6124,7 +6126,7 @@ var $ZodCheckLengthEquals = /* @__PURE__ */ $constructor("$ZodCheckLengthEquals"
   };
 });
 var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat", (inst, def) => {
-  var _a3, _b;
+  var _a4, _b;
   $ZodCheck.init(inst, def);
   inst._zod.onattach.push((inst2) => {
     const bag = inst2._zod.bag;
@@ -6135,7 +6137,7 @@ var $ZodCheckStringFormat = /* @__PURE__ */ $constructor("$ZodCheckStringFormat"
     }
   });
   if (def.pattern)
-    (_a3 = inst._zod).check ?? (_a3.check = (payload) => {
+    (_a4 = inst._zod).check ?? (_a4.check = (payload) => {
       def.pattern.lastIndex = 0;
       if (def.pattern.test(payload.value))
         return;
@@ -6336,7 +6338,7 @@ var version = {
 
 // node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
-  var _a3;
+  var _a4;
   inst ?? (inst = {});
   inst._zod.def = def;
   inst._zod.bag = inst._zod.bag || {};
@@ -6351,7 +6353,7 @@ var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
     }
   }
   if (checks.length === 0) {
-    (_a3 = inst._zod).deferred ?? (_a3.deferred = []);
+    (_a4 = inst._zod).deferred ?? (_a4.deferred = []);
     inst._zod.deferred?.push(() => {
       inst._zod.run = inst._zod.parse;
     });
@@ -13717,7 +13719,7 @@ var JSONSchemaGenerator = class {
     this.seen = /* @__PURE__ */ new Map();
   }
   process(schema, _params = { path: [], schemaPath: [] }) {
-    var _a3;
+    var _a4;
     const def = schema._zod.def;
     const formatMap = {
       guid: "uuid",
@@ -14179,7 +14181,7 @@ var JSONSchemaGenerator = class {
       delete result.schema.default;
     }
     if (this.io === "input" && result.schema._prefault)
-      (_a3 = result.schema).default ?? (_a3.default = result.schema._prefault);
+      (_a4 = result.schema).default ?? (_a4.default = result.schema._prefault);
     delete result.schema._prefault;
     const _result = this.seen.get(schema);
     return _result.schema;
@@ -15891,9 +15893,6 @@ var softwareMinimumVersion = new Lazy(() => {
   }
   return new Version(manifest.value.Software.MinimumVersion);
 });
-function getSDKVersion() {
-  return manifest.value?.SDKVersion ?? null;
-}
 function getSoftwareMinimumVersion() {
   return softwareMinimumVersion.value;
 }
@@ -15904,12 +15903,59 @@ function getManifest() {
 // node_modules/@elgato/streamdeck/dist/plugin/settings.js
 var import_node_crypto = require("node:crypto");
 
+// node_modules/@elgato/streamdeck/dist/plugin/actions/cache.js
+var SettingsCache = class {
+  /**
+   * Underlying map of action ID to cached settings.
+   */
+  #entries = /* @__PURE__ */ new Map();
+  /**
+   * Clears the cached settings.
+   */
+  clear() {
+    this.#entries.clear();
+  }
+  /**
+   * Removes the cached settings for the specified action.
+   * @param id Action instance identifier.
+   */
+  delete(id) {
+    this.#entries.delete(id);
+  }
+  /**
+   * Gets the cached settings for the specified action.
+   * @param id Action instance identifier.
+   * @returns The cached settings when present; otherwise `undefined`.
+   */
+  get(id) {
+    const settings2 = this.#entries.get(id);
+    return settings2 !== void 0 ? structuredClone(settings2) : void 0;
+  }
+  /**
+   * Sets the cached settings for the specified action.
+   * @param id Action instance identifier.
+   * @param settings The settings to cache.
+   */
+  set(id, settings2) {
+    this.#entries.set(id, structuredClone(settings2));
+  }
+};
+var settingsCache = new SettingsCache();
+
 // node_modules/@elgato/streamdeck/dist/plugin/actions/config.js
 var actionConfig = {
   /**
-   * Determines whether settings requests should use message identifiers and action settings cache behavior.
+   * Determines the behavior of when `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are fired.
+   *
+   * - `false` (default) — `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are only fired
+   * after the settings are updated within the property inspector.
+   * - `true` — `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are fired after the settings
+   * are updated within the property inspector, and after calling `action.getSettings()` and
+   * `streamDeck.settings.getGlobalSettings()` respectively.
+   *
+   * This option replaces `useExperimentalMessageIdentifiers`, with inverted behavior.
    */
-  useExperimentalMessageIdentifiers: false
+  useLegacySettingsBehavior: false
 };
 
 // node_modules/@elgato/streamdeck/dist/plugin/actions/store.js
@@ -16078,12 +16124,6 @@ var SendToPluginEvent = class extends Event {
 };
 
 // node_modules/@elgato/streamdeck/dist/plugin/validation.js
-function requiresSDKVersion(minimumVersion, feature) {
-  const sdkVersion = getSDKVersion();
-  if (sdkVersion !== null && minimumVersion > sdkVersion) {
-    throw new Error(`[ERR_NOT_SUPPORTED]: ${feature} requires manifest SDK version ${minimumVersion} or higher, but found version ${sdkVersion}; please update the "SDKVersion" in the plugin's manifest to ${minimumVersion} or higher.`);
-  }
-}
 function requiresVersion(minimumVersion, streamDeckVersion, feature) {
   const required3 = {
     major: Math.floor(minimumVersion),
@@ -16104,26 +16144,43 @@ function requiresVersion(minimumVersion, streamDeckVersion, feature) {
 // node_modules/@elgato/streamdeck/dist/plugin/settings.js
 var settings = {
   /**
-   * Available from Stream Deck 7.1; determines whether message identifiers should be sent when getting
-   * action-instance or global settings.
+   * Determines the behavior of when `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are fired.
    *
-   * When `true`, the did-receive events associated with settings are only emitted when the action-instance
-   * or global settings are changed in the property inspector.
-   * @returns The value.
+   * - `false` (default) — `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are only fired
+   * after the settings are updated within the property inspector.
+   * - `true` — `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are fired after the settings
+   * are updated within the property inspector, and after calling `action.getSettings()` and
+   * `streamDeck.settings.getGlobalSettings()` respectively.
+   *
+   * This option replaces `useExperimentalMessageIdentifiers`, with inverted behavior.
    */
-  get useExperimentalMessageIdentifiers() {
-    return actionConfig.useExperimentalMessageIdentifiers;
+  get useLegacySettingsBehavior() {
+    return actionConfig.useLegacySettingsBehavior;
   },
   /**
-   * Available from Stream Deck 7.1; determines whether message identifiers should be sent when getting
-   * action-instance or global settings.
+   * Determines the behavior of when `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are fired.
    *
-   * When `true`, the did-receive events associated with settings are only emitted when the action-instance
-   * or global settings are changed in the property inspector.
+   * - `false` (default) — `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are only fired
+   * after the settings are updated within the property inspector.
+   * - `true` — `onDidReceiveSettings` and `onDidReceiveGlobalSettings` are fired after the settings
+   * are updated within the property inspector, and after calling `action.getSettings()` and
+   * `streamDeck.settings.getGlobalSettings()` respectively.
+   *
+   * This option replaces `useExperimentalMessageIdentifiers`, with inverted behavior.
    */
-  set useExperimentalMessageIdentifiers(value) {
-    requiresVersion(7.1, connection.version, "Message identifiers");
-    actionConfig.useExperimentalMessageIdentifiers = value;
+  set useLegacySettingsBehavior(value) {
+    const prev = actionConfig.useLegacySettingsBehavior;
+    if (prev === value) {
+      return;
+    }
+    try {
+      actionConfig.useLegacySettingsBehavior = value;
+      validateSettingsBehavior();
+      settingsCache.clear();
+    } catch (err) {
+      actionConfig.useLegacySettingsBehavior = prev;
+      throw err;
+    }
   },
   /**
    * Gets the global settings associated with the plugin.
@@ -16141,30 +16198,34 @@ var settings = {
     });
   },
   /**
-   * Occurs when the global settings are requested, or when the the global settings were updated in
-   * the property inspector.
+   * Occurs when the global settings are updated within the property inspector.
+   *
+   * When `streamDeck.settings.useLegacySettingsBehavior` is set to `true`, this event will also
+   * occur when calling `getGlobalSettings()`.
    * @template T The type of settings associated with the action.
    * @param listener Function to be invoked when the event occurs.
    * @returns A disposable that removes the listener.
    */
   onDidReceiveGlobalSettings: (listener) => {
     return connection.disposableOn("didReceiveGlobalSettings", (ev) => {
-      if (settings.useExperimentalMessageIdentifiers && ev.id) {
+      if (!settings.useLegacySettingsBehavior && ev.id) {
         return;
       }
       listener(new DidReceiveGlobalSettingsEvent(ev));
     });
   },
   /**
-   * Occurs when the settings associated with an action instance are requested, or when the the settings
-   * were updated in the property inspector.
+   * Occurs when the settings, associated with an action, are updated within the property inspector.
+   *
+   * When `streamDeck.settings.useLegacySettingsBehavior` is set to `true`, this event will also
+   * occur when calling `getSettings()` on an action.
    * @template T The type of settings associated with the action.
    * @param listener Function to be invoked when the event occurs.
    * @returns A disposable that removes the listener.
    */
   onDidReceiveSettings: (listener) => {
     return connection.disposableOn("didReceiveSettings", (ev) => {
-      if (settings.useExperimentalMessageIdentifiers && ev.id) {
+      if (!settings.useLegacySettingsBehavior && ev.id) {
         return;
       }
       const action2 = actionStore.getActionById(ev.context);
@@ -16191,6 +16252,11 @@ var settings = {
     });
   }
 };
+function validateSettingsBehavior() {
+  if (!settings.useLegacySettingsBehavior) {
+    requiresVersion(7.1, connection.version, "Default onDidReceiveSettings/onDidReceiveGlobalSettings behavior");
+  }
+}
 
 // node_modules/@elgato/streamdeck/dist/plugin/ui.js
 var UIController = class {
@@ -16301,42 +16367,6 @@ var UIController = class {
 };
 var ui = new UIController();
 
-// node_modules/@elgato/streamdeck/dist/plugin/actions/action.js
-var import_node_crypto2 = require("node:crypto");
-
-// node_modules/@elgato/streamdeck/dist/plugin/actions/cache.js
-var SettingsCache = class {
-  /**
-   * Underlying map of action ID to cached settings.
-   */
-  #entries = /* @__PURE__ */ new Map();
-  /**
-   * Removes the cached settings for the specified action.
-   * @param id Action instance identifier.
-   */
-  delete(id) {
-    this.#entries.delete(id);
-  }
-  /**
-   * Gets the cached settings for the specified action.
-   * @param id Action instance identifier.
-   * @returns The cached settings when present; otherwise `undefined`.
-   */
-  get(id) {
-    const settings2 = this.#entries.get(id);
-    return settings2 !== void 0 ? structuredClone(settings2) : void 0;
-  }
-  /**
-   * Sets the cached settings for the specified action.
-   * @param id Action instance identifier.
-   * @param settings The settings to cache.
-   */
-  set(id, settings2) {
-    this.#entries.set(id, structuredClone(settings2));
-  }
-};
-var settingsCache = new SettingsCache();
-
 // node_modules/@elgato/streamdeck/dist/plugin/devices/store.js
 var __items2 = /* @__PURE__ */ new Map();
 var ReadOnlyDeviceStore = class extends Enumerable {
@@ -16432,12 +16462,13 @@ var ActionContext = class {
   }
 };
 
-// node_modules/@elgato/streamdeck/dist/plugin/actions/action.js
+// node_modules/@elgato/streamdeck/dist/plugin/actions/action-base.js
+var import_node_crypto2 = require("node:crypto");
 var REQUEST_TIMEOUT = 15 * 1e3;
-var Action = class extends ActionContext {
+var ActionBase = class extends ActionContext {
   /**
-   * Gets the resources (files) associated with this action; these resources are embedded into the
-   * action when it is exported, either individually, or as part of a profile.
+   * Gets the resources (files) associated with this action; these resources are embedded into the action when it is
+   * exported, either individually, or as part of a profile.
    *
    * Available from Stream Deck 7.1.
    * @returns The resources.
@@ -16449,11 +16480,10 @@ var Action = class extends ActionContext {
   }
   /**
    * Gets the settings associated this action instance.
-   * @template U The type of settings associated with the action.D
    * @returns Promise containing the action instance's settings.
    */
   async getSettings() {
-    if (actionConfig.useExperimentalMessageIdentifiers) {
+    if (!actionConfig.useLegacySettingsBehavior) {
       const cached2 = settingsCache.get(this.id);
       if (cached2 !== void 0) {
         logger.trace(JSON.stringify({
@@ -16483,8 +16513,15 @@ var Action = class extends ActionContext {
     return this.controllerType === "Keypad";
   }
   /**
-   * Sets the resources (files) associated with this action; these resources are embedded into the
-   * action when it is exported, either individually, or as part of a profile.
+   * Determines whether this instance is an Infobar.
+   * @returns `true` when this instance is an Infobar; otherwise `false`.
+   */
+  isNeoInfobar() {
+    return this.controllerType === "Neo";
+  }
+  /**
+   * Sets the resources (files) associated with this action; these resources are embedded into the action when it is
+   * exported, either individually, or as part of a profile.
    *
    * Available from Stream Deck 7.1.
    * @example
@@ -16504,7 +16541,7 @@ var Action = class extends ActionContext {
     });
   }
   /**
-   * Sets the settings associated with this action instance. Use in conjunction with {@link Action.getSettings}.
+   * Sets the settings associated with this action instance.
    * @param value Settings to persist.
    * @returns `Promise` resolved when the settings are sent to Stream Deck.
    */
@@ -16514,16 +16551,6 @@ var Action = class extends ActionContext {
       event: "setSettings",
       context: this.id,
       payload: value
-    });
-  }
-  /**
-   * Temporarily shows an alert (i.e. warning), in the form of an exclamation mark in a yellow triangle, on this action instance. Used to provide visual feedback when an action failed.
-   * @returns `Promise` resolved when the request to show an alert has been sent to Stream Deck.
-   */
-  showAlert() {
-    return connection.send({
-      event: "showAlert",
-      context: this.id
     });
   }
   /**
@@ -16555,9 +16582,9 @@ var Action = class extends ActionContext {
 };
 
 // node_modules/@elgato/streamdeck/dist/plugin/actions/dial.js
-var DialAction = class extends Action {
+var DialAction = class extends ActionBase {
   /**
-   * Private backing field for {@link DialAction.coordinates}.
+   * Private backing field for the coordinates.
    */
   #coordinates;
   /**
@@ -16580,7 +16607,7 @@ var DialAction = class extends Action {
   }
   /**
    * Sets the feedback for the current layout associated with this action instance, allowing for the visual items to be updated. Layouts are a powerful way to provide dynamic information
-   * to users, and can be assigned in the manifest, or dynamically via {@link Action.setFeedbackLayout}.
+   * to users, and can be assigned in the manifest, or dynamically via {@link DialAction.setFeedbackLayout}.
    *
    * The {@link feedback} payload defines which items within the layout will be updated, and are identified by their property name (defined as the `key` in the layout's definition).
    * The values can either by a complete new definition, a `string` for layout item types of `text` and `pixmap`, or a `number` for layout item types of `bar` and `gbar`.
@@ -16596,7 +16623,7 @@ var DialAction = class extends Action {
   }
   /**
    * Sets the layout associated with this action instance. The layout must be either a built-in layout identifier, or path to a local layout JSON file within the plugin's folder.
-   * Use in conjunction with {@link Action.setFeedback} to update the layout's current items' settings.
+   * Use in conjunction with {@link DialAction.setFeedback} to update the layout's current items' settings.
    * @param layout Name of a pre-defined layout, or relative path to a custom one.
    * @returns `Promise` resolved when the new layout has been sent to Stream Deck.
    */
@@ -16653,6 +16680,16 @@ var DialAction = class extends Action {
     });
   }
   /**
+   * Shows a temporary alert (i.e. warning) indicator on the touch strip associated with the action.
+   * @returns `Promise` resolved when the request to show an alert has been sent to Stream Deck.
+   */
+  showAlert() {
+    return connection.send({
+      event: "showAlert",
+      context: this.id
+    });
+  }
+  /**
    * @inheritdoc
    */
   toJSON() {
@@ -16664,9 +16701,9 @@ var DialAction = class extends Action {
 };
 
 // node_modules/@elgato/streamdeck/dist/plugin/actions/key.js
-var KeyAction = class extends Action {
+var KeyAction = class extends ActionBase {
   /**
-   * Private backing field for {@link KeyAction.coordinates}.
+   * Private backing field for the coordinates.
    */
   #coordinates;
   /**
@@ -16751,7 +16788,18 @@ var KeyAction = class extends Action {
     });
   }
   /**
-   * Temporarily shows an "OK" (i.e. success), in the form of a check-mark in a green circle, on this action instance. Used to provide visual feedback when an action successfully
+   * Shows a temporary alert (i.e. warning), in the form of an exclamation mark in a yellow triangle, on the key.
+   * @returns `Promise` resolved when the request to show an alert has been sent to Stream Deck.
+   */
+  showAlert() {
+    return connection.send({
+      event: "showAlert",
+      context: this.id
+    });
+  }
+  /**
+   * Temporarily shows an "OK" (i.e. success), in the form of a check-mark in a green circle, on this action instance.
+   * Used to provide visual feedback when an action successfully
    * executed.
    * @returns `Promise` resolved when the request to show an "OK" has been sent to Stream Deck.
    */
@@ -16773,6 +16821,74 @@ var KeyAction = class extends Action {
   }
 };
 
+// node_modules/@elgato/streamdeck/dist/plugin/actions/neo-infobar.js
+var NeoInfobarAction = class extends ActionBase {
+  /**
+   * Private backing field for the coordinates.
+   */
+  #coordinates;
+  /**
+   * Initializes a new instance of the {@see NeoInfobarAction} class.
+   * @param source Source of the action.
+   */
+  constructor(source) {
+    super(source);
+    if (source.payload.controller !== "Neo") {
+      throw new Error("Unable to create NeoInfobarAction; source event controller is not 'Neo'");
+    }
+    this.#coordinates = Object.freeze(source.payload.coordinates);
+  }
+  /**
+   * Coordinates of the Infobar.
+   * @returns The coordinates.
+   */
+  get coordinates() {
+    return this.#coordinates;
+  }
+  /**
+   * Sets the feedback for the current layout associated with this action instance, allowing for the visual items to be
+   * updated. Layouts are a powerful way to provide dynamic information to users, and can be assigned in the manifest,
+   * or dynamically via `setFeedbackLayout`.
+   *
+   * The `feedback` payload defines which items within the layout will be updated, and are identified by their property
+   * name (defined as the `key` in the layout's definition). The values can either be a complete new definition, a `string`
+   * for layout item types of `text` and `pixmap`, or a `number` for layout item types of `bar` and `gbar`.
+   * @param feedback Object containing information about the layout items to be updated.
+   * @returns `Promise` resolved when the request to set the `feedback` has been sent to Stream Deck.
+   */
+  setFeedback(feedback) {
+    return connection.send({
+      event: "setFeedback",
+      context: this.id,
+      payload: feedback
+    });
+  }
+  /**
+   * Sets the layout associated with this action instance. The layout must be a path to a local layout JSON file within
+   * the plugin's folder. Use in conjunction with `setFeedback` to update the layout's current items' settings.
+   * @param layout Relative path to the layout file.
+   * @returns `Promise` resolved when the new layout has been sent to Stream Deck.
+   */
+  setFeedbackLayout(layout) {
+    return connection.send({
+      event: "setFeedbackLayout",
+      context: this.id,
+      payload: {
+        layout
+      }
+    });
+  }
+  /**
+   * @inheritdoc
+   */
+  toJSON() {
+    return {
+      ...super.toJSON(),
+      coordinates: this.coordinates
+    };
+  }
+};
+
 // node_modules/@elgato/streamdeck/dist/plugin/actions/service.js
 var manifest2 = new Lazy(() => getManifest());
 var ActionService = class extends ReadOnlyActionStore {
@@ -16782,14 +16898,14 @@ var ActionService = class extends ReadOnlyActionStore {
   constructor() {
     super();
     connection.prependListener("willAppear", (ev) => {
-      const action2 = ev.payload.controller === "Encoder" ? new DialAction(ev) : new KeyAction(ev);
+      const action2 = this.#createAction(ev);
       actionStore.set(action2);
-      if (actionConfig.useExperimentalMessageIdentifiers) {
+      if (!actionConfig.useLegacySettingsBehavior) {
         settingsCache.set(ev.context, ev.payload.settings);
       }
     });
     connection.prependListener("didReceiveSettings", (ev) => {
-      if (actionConfig.useExperimentalMessageIdentifiers) {
+      if (!actionConfig.useLegacySettingsBehavior) {
         settingsCache.set(ev.context, ev.payload.settings);
       }
     });
@@ -16841,7 +16957,7 @@ var ActionService = class extends ReadOnlyActionStore {
     });
   }
   /**
-   * Occurs when the resources were updated within the property inspector.
+   * Occurs when the resources are updated within the property inspector.
    * @param listener Function to be invoked when the event occurs.
    * @returns A disposable that, when disposed, removes the listener.
    */
@@ -16885,7 +17001,7 @@ var ActionService = class extends ReadOnlyActionStore {
     });
   }
   /**
-   * Occurs when the user updates an action's title settings in the Stream Deck application. See also {@link Action.setTitle}.
+   * Occurs when the user updates an action's title settings in the Stream Deck application.
    * @template T The type of settings associated with the action.
    * @param listener Function to be invoked when the event occurs.
    * @returns A disposable that, when disposed, removes the listener.
@@ -16983,6 +17099,21 @@ var ActionService = class extends ReadOnlyActionStore {
     route(this.onTouchTap, action2.onTouchTap);
     route(this.onWillAppear, action2.onWillAppear);
     route(this.onWillDisappear, action2.onWillDisappear);
+  }
+  /**
+   * Creates an instance of an action from its associated controller.
+   * @param ev Event that contains the controller.
+   * @returns The action instance.
+   */
+  #createAction(ev) {
+    switch (ev.payload.controller) {
+      case "Encoder":
+        return new DialAction(ev);
+      case "Neo":
+        return new NeoInfobarAction(ev);
+      default:
+        return new KeyAction(ev);
+    }
   }
 };
 var actionService = new ActionService();
@@ -17163,7 +17294,6 @@ function switchToProfile(deviceId, profile, page) {
 // node_modules/@elgato/streamdeck/dist/plugin/system.js
 var system_exports = {};
 __export(system_exports, {
-  getSecrets: () => getSecrets,
   onApplicationDidLaunch: () => onApplicationDidLaunch,
   onApplicationDidTerminate: () => onApplicationDidTerminate,
   onDidReceiveDeepLink: () => onDidReceiveDeepLink,
@@ -17189,17 +17319,6 @@ function openUrl(url2) {
     payload: {
       url: url2
     }
-  });
-}
-function getSecrets() {
-  requiresVersion(6.9, connection.version, "Secrets");
-  requiresSDKVersion(3, "Secrets");
-  return new Promise((resolve2) => {
-    connection.once("didReceiveSecrets", (ev) => resolve2(ev.payload.secrets));
-    connection.send({
-      event: "getSecrets",
-      context: connection.registrationParameters.pluginUUID
-    });
   });
 }
 
@@ -17299,10 +17418,10 @@ var streamDeck = {
   },
   /**
    * Connects the plugin to the Stream Deck.
-   * @returns A promise resolved when a connection has been established.
    */
-  connect() {
-    return connection.connect();
+  async connect() {
+    validateSettingsBehavior();
+    await connection.connect();
   }
 };
 var plugin_default = streamDeck;
@@ -18044,13 +18163,12 @@ function iconMarkup(icon, x, y, sizePx, stroke) {
     `<rect x="1.5" y="3" width="13" height="11.5" rx="2"/><path d="M5 1.5v3M11 1.5v3M1.5 7h13"/>`
   );
 }
-function pageDots(face, faces, accent, cx) {
+function pageDots(face, faces, accent, cx, cy = 138, gap = 14, r = 3.5) {
   if (!faces || faces <= 1) return "";
-  const gap = 14;
   const x0 = cx - (faces - 1) * gap / 2;
   let out = "";
   for (let i = 0; i < faces; i++) {
-    out += `<circle cx="${x0 + i * gap}" cy="138" r="3.5" fill="${i === (face ?? 0) ? accent : "#4b5563"}"/>`;
+    out += `<circle cx="${x0 + i * gap}" cy="${cy}" r="${r}" fill="${i === (face ?? 0) ? accent : "#4b5563"}"/>`;
   }
   return out;
 }
@@ -18220,6 +18338,106 @@ function svgDial(opts) {
   ${opts.stale ? `<circle cx="190" cy="11" r="3.5" fill="#f59e0b"/>` : ""}
 </svg>`;
 }
+function flag(v, d) {
+  return v == null || v === "" ? d : String(v) !== "false";
+}
+function infobarShow(s) {
+  return {
+    icon: flag(s.infoIcon, true),
+    bar: flag(s.infoBar, true),
+    countdown: flag(s.infoCountdown, true),
+    dots: flag(s.infoDots, true)
+  };
+}
+function summaryFaces(s) {
+  const want = {
+    session: flag(s.infoSumSession, true),
+    weekly: flag(s.infoSumWeekly, true),
+    model_weekly: flag(s.infoSumModel, false)
+  };
+  return FACES.filter((f) => want[f.id]);
+}
+function alertJump(order, pcts, crit, latch, prefix) {
+  let jump = null;
+  order.forEach((f, i) => {
+    if (!f.metric) return;
+    const k = prefix + f.metric;
+    const pct = pcts[f.metric];
+    const above = pct != null && pct >= crit;
+    if (above && !latch.get(k) && jump == null) jump = i;
+    latch.set(k, above);
+  });
+  return jump;
+}
+function jumpHoldSec(s) {
+  const sec = numOr(s.carouselSec, 10);
+  return sec > 0 ? Math.min(3600, Math.max(1, sec)) : 10;
+}
+var INFOBAR_DOT_GAP = 8;
+function infobarDots(face, faces, accent) {
+  const n = faces ?? 0;
+  return pageDots(face, faces, accent, 220 - (n - 1) * INFOBAR_DOT_GAP / 2, 10, INFOBAR_DOT_GAP, 2);
+}
+function infobarTextEnd(dots, faces) {
+  return dots ? 220 - ((faces ?? 1) - 1) * INFOBAR_DOT_GAP - 8 : 224;
+}
+function svgInfobar(opts) {
+  const accent = opts.accent || "#9ca3af";
+  const pctNum = opts.pct == null ? "--" : `${Math.round(opts.pct)}`;
+  const pctSize = pctNum.length >= 3 ? 30 : 34;
+  const x0 = 84;
+  const barW = 224 - x0;
+  const dots = opts.show.dots ? infobarDots(opts.face, opts.faces, accent) : "";
+  const icon = opts.show.icon && opts.icon ? iconMarkup(opts.icon, x0, 4, 12, accent) : "";
+  const labelX = icon ? x0 + 16 : x0;
+  const labelAvail = infobarTextEnd(dots, opts.faces) - labelX;
+  let labelSize = 11;
+  while (labelSize > 8 && textWidthEm(opts.label) * labelSize * 1.08 + opts.label.length * 1.5 > labelAvail) labelSize -= 1;
+  let noteSize = 12;
+  while (noteSize > 9 && textWidthEm(opts.note) * noteSize * 1.08 > barW) noteSize -= 1;
+  const p = opts.pct == null ? 0 : Math.max(0, Math.min(100, opts.pct));
+  const fillW = p / 100 * barW;
+  const bar = opts.show.bar ? `<rect x="${x0}" y="21" width="${barW}" height="8" rx="4" fill="#2a313d"/>` + (fillW > 0 ? `<rect x="${x0}" y="21" width="${fillW.toFixed(1)}" height="8" rx="4" fill="${opts.col}"/>` : "") : "";
+  const note = opts.show.countdown && opts.note ? `<text x="${x0}" y="44" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${opts.stale ? "#f59e0b" : opts.noteCol || "#e5e7eb"}">${esc2(opts.note)}</text>` : "";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50">
+  <rect width="232" height="50" fill="${opts.bg || "#0f1216"}"/>
+  <text x="8" y="39" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${opts.col}">${esc2(pctNum)}${opts.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>
+  ${icon}
+  <text x="${labelX}" y="14" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" letter-spacing="1.5" fill="${accent}">${esc2(opts.label)}</text>
+  ${dots}
+  ${bar}
+  ${note}
+</svg>`;
+}
+function svgInfobarSummary(opts) {
+  const n = opts.cols.length;
+  let body;
+  if (!n) {
+    body = iconMarkup("badge", 116 - 21, 4, 42, BADGE_COLOR);
+  } else {
+    const colW = 232 / n;
+    const pad = 5;
+    const w = colW - 2 * pad;
+    const pctSize = n >= 3 ? 20 : 22;
+    body = opts.cols.map((c, i) => {
+      const x0 = i * colW + pad;
+      const divider = i ? `<rect x="${(i * colW - 0.5).toFixed(1)}" y="8" width="1" height="34" fill="#2a313d"/>` : "";
+      let labelSize = 12;
+      while (labelSize > 9 && textWidthEm(c.label) * labelSize * 1.08 > w) labelSize -= 1;
+      const icon = opts.show.icon ? iconMarkup(c.icon, x0, 22, 14, c.accent) : "";
+      const pctX = icon ? x0 + 18 : x0;
+      const pctNum = c.pct == null ? "--" : `${Math.round(c.pct)}`;
+      const p = c.pct == null ? 0 : Math.max(0, Math.min(100, c.pct));
+      const fillW = p / 100 * w;
+      const bar = opts.show.bar ? `<rect x="${x0.toFixed(1)}" y="42" width="${w.toFixed(1)}" height="4" rx="2" fill="#2a313d"/>` + (fillW > 0 ? `<rect x="${x0.toFixed(1)}" y="42" width="${fillW.toFixed(1)}" height="4" rx="2" fill="${c.col}"/>` : "") : "";
+      return divider + `<text x="${x0.toFixed(1)}" y="13" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${c.accent}">${esc2(c.label)}</text>` + icon + `<text x="${pctX.toFixed(1)}" y="36" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${c.col}">${esc2(pctNum)}${c.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>` + bar;
+    }).join("\n  ");
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50">
+  <rect width="232" height="50" fill="${opts.bg || "#0f1216"}"/>
+  ${body}
+</svg>`;
+}
 
 // src/plugin.ts
 function hexOf(v) {
@@ -18297,7 +18515,7 @@ function badgeImage(path5) {
   }
 }
 function syncCarousel(act, s) {
-  const isCarousel = (s.metric || "session") === "carousel";
+  const isCarousel = act.isNeoInfobar?.() || (s.metric || "session") === "carousel";
   const st = carousel.get(act.id);
   if (st?.timer) clearTimeout(st.timer);
   if (!isCarousel) {
@@ -18327,6 +18545,7 @@ function profileFor(s) {
   return resolveProfile(s.profile, extra ? [extra] : []);
 }
 async function draw(act, s) {
+  if (act.isNeoInfobar?.()) return drawInfobar(act, s);
   if (typeof act.setFeedback === "function") return drawDial(act, s);
   const metric = s.metric || "session";
   if (metric === "carousel") return drawCarousel(act, s);
@@ -18480,11 +18699,25 @@ async function drawDial(act, s) {
     stale: !!stale
   });
 }
-async function drawCarousel(act, s) {
-  const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
-  const { data, error: error40, stale } = await fetchUsage(ua, false, profileFor(s) ?? void 0);
+function numberFace(f, s, res) {
   const warn = num(s.warn, 50);
   const crit = num(s.crit, 80);
+  const label = (faceLabelOf(f, s) || "").trim() || f.label;
+  const pal = facePalette(f, s);
+  const look = { accent: pal.accent, icon: f.icon, noteCol: pal.noteCol };
+  if (!res.data) {
+    const note2 = res.error === "no-token" || res.error === "token-expired" ? "open Claude" : res.error === "network" ? "offline" : "\u2026";
+    return { label, pct: null, note: note2, col: color(null, warn, crit), stale: true, ...look };
+  }
+  const { label: apiLabel, pct, resetsAt } = pickMetric(res.data, f.metric);
+  const shown = f.id === "model_weekly" && !(faceLabelOf(f, s) || "").trim() && apiLabel ? apiLabel.toUpperCase() : label;
+  const note = pct == null ? "n/a here" : untilText(resetsAt);
+  const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
+  return { label: shown, pct, note, col, stale: !!res.stale, ...look };
+}
+async function drawCarousel(act, s) {
+  const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
+  const res = await fetchUsage(ua, false, profileFor(s) ?? void 0);
   const order = faceOrder(s);
   const faces = order.length;
   const face = (carousel.get(act.id)?.face ?? startFace(s)) % faces;
@@ -18503,51 +18736,43 @@ async function drawCarousel(act, s) {
     );
     return;
   }
-  const label = (faceLabelOf(f, s) || "").trim() || f.label;
-  const pal = facePalette(f, s);
-  if (!data) {
-    const note2 = error40 === "no-token" || error40 === "token-expired" ? "open Claude" : error40 === "network" ? "offline" : "\u2026";
-    await act.setImage(
-      toDataUri(
-        svgBig({
-          label,
-          pct: null,
-          note: note2,
-          col: color(null, warn, crit),
-          stale: true,
-          bg: bgOf(s),
-          face,
-          faces,
-          accent: pal.accent,
-          icon: f.icon,
-          noteCol: pal.noteCol
-        })
-      )
-    );
+  const v = numberFace(f, s, res);
+  if (res.data) maybeAlert(act, s, f.metric, v.pct, num(s.crit, 80));
+  await act.setImage(toDataUri(svgBig({ ...v, bg: bgOf(s), face, faces })));
+}
+function holdFace(act, s, face) {
+  const st = carousel.get(act.id) ?? { face: startFace(s), start: s.carouselStart };
+  if (st.timer) clearTimeout(st.timer);
+  st.face = face;
+  carousel.set(act.id, st);
+  if (carouselAuto(s)) {
+    syncCarousel(act, s);
     return;
   }
-  const { label: apiLabel, pct, resetsAt } = pickMetric(data, f.metric);
-  maybeAlert(act, s, f.metric, pct, crit);
-  const shown = f.id === "model_weekly" && !(faceLabelOf(f, s) || "").trim() && apiLabel ? apiLabel.toUpperCase() : label;
-  const note = pct == null ? "n/a here" : untilText(resetsAt);
-  const col = pct != null && pct >= warn ? color(pct, warn, crit) : pal.pctCol;
-  await act.setImage(
-    toDataUri(
-      svgBig({
-        label: shown,
-        pct,
-        note,
-        col,
-        stale: !!stale,
-        bg: bgOf(s),
-        face,
-        faces,
-        accent: pal.accent,
-        icon: f.icon,
-        noteCol: pal.noteCol
-      })
-    )
-  );
+  st.timer = setTimeout(() => {
+    st.timer = void 0;
+    st.face = startFace(s);
+    draw(act, s).catch(() => {
+    });
+  }, jumpHoldSec(s) * 1e3);
+}
+async function drawInfobar(act, s) {
+  const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
+  const res = await fetchUsage(ua, false, profileFor(s) ?? void 0);
+  const order = faceOrder(s);
+  const data = res.data;
+  if (data && String(s.alertFlash) !== "false") {
+    const pcts = Object.fromEntries(
+      order.filter((f2) => f2.metric).map((f2) => [f2.metric, pickMetric(data, f2.metric).pct])
+    );
+    const jump = alertJump(order, pcts, num(s.crit, 80), alerted, act.id + ":");
+    if (jump != null) holdFace(act, s, jump);
+  }
+  const faces = order.length;
+  const face = (carousel.get(act.id)?.face ?? startFace(s)) % faces;
+  const f = order[face];
+  const svg = f.id === "badge" ? svgInfobarSummary({ bg: bgOf(s), show: infobarShow(s), cols: summaryFaces(s).map((sf) => numberFace(sf, s, res)) }) : svgInfobar({ ...numberFace(f, s, res), bg: bgOf(s), face, faces, show: infobarShow(s) });
+  await act.setFeedback({ canvas: toDataUri(svg) });
 }
 async function drawGauge(act, s, metric) {
   const ua = s.userAgent && s.userAgent.trim() || DEFAULT_UA;
@@ -18741,8 +18966,20 @@ var UsageDial = class extends (_a2 = SingletonAction) {
 _init2 = __decoratorStart(_a2);
 UsageDial = __decorateElement(_init2, 0, "UsageDial", _UsageDial_decorators, UsageDial);
 __runInitializers(_init2, 1, UsageDial);
+var _UsageInfobar_decorators, _init3, _a3;
+_UsageInfobar_decorators = [action({ UUID: "com.saeedkolivand.claude-usage.infobar" })];
+var UsageInfobar = class extends (_a3 = UsageMeter) {
+  async onWillAppear(ev) {
+    if (ev.action.isNeoInfobar()) await ev.action.setFeedbackLayout("layouts/infobar.json");
+    await super.onWillAppear(ev);
+  }
+};
+_init3 = __decoratorStart(_a3);
+UsageInfobar = __decorateElement(_init3, 0, "UsageInfobar", _UsageInfobar_decorators, UsageInfobar);
+__runInitializers(_init3, 1, UsageInfobar);
 plugin_default.actions.registerAction(new UsageMeter());
 plugin_default.actions.registerAction(new UsageDial());
+plugin_default.actions.registerAction(new UsageInfobar());
 plugin_default.connect();
 setTimeout(() => refreshAll(false).catch(() => {
 }), 1500);

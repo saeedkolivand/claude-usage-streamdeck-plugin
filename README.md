@@ -6,7 +6,7 @@ like and pick a metric per key. Tap any key to force a refresh.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platforms](https://img.shields.io/badge/run%20on-macOS%20%7C%20Windows-blue.svg)
-![Stream Deck](https://img.shields.io/badge/Stream%20Deck-6.9%2B-black.svg)
+![Stream Deck](https://img.shields.io/badge/Stream%20Deck-7.6%2B-black.svg)
 ![Node](https://img.shields.io/badge/build%20with-Node%2020%2B-339933.svg)
 [![Elgato Marketplace](https://img.shields.io/badge/Elgato%20Marketplace-Available-d97757.svg)](https://marketplace.elgato.com/product/ai-coding-usage-meter-f4aa1012-a57b-4a02-9b90-a37004678ee7)
 
@@ -55,6 +55,14 @@ On a **Stream Deck +**, the separate **Usage Dial** action puts a metric on the
 touch strip: turn the dial to cycle metrics, press it (or tap the strip) to
 force a refresh.
 
+On a **Stream Deck Neo**, the **Usage Infobar** action puts the carousel on the
+infobar under the keys — the same faces, order, timing, labels and colors as a
+carousel key, laid out for the 232×50 strip. Icon, bar, countdown and page dots
+can each be switched off. In place of the badge, the infobar has a **Summary**
+face that lays the windows you tick (5-hour, weekly, model) side by side, each
+with its % and bar. The infobar takes no input, so a window crossing Red jumps
+to its face for one interval instead of flashing.
+
 Every poll also writes `~/.claude-usage/stats.json` — all profiles' live
 limits, token/cost totals and burn rate in one machine-readable file, for OBS
 overlays and scripts.
@@ -62,7 +70,7 @@ overlays and scripts.
 ## Requirements
 
 **To run:** the official [Elgato Stream Deck app](https://www.elgato.com/downloads)
-**6.9 or newer** — it ships the Node runtime the plugin uses, so you do **not**
+**7.6 or newer** — it ships the Node runtime the plugin uses, so you do **not**
 need Node.js installed separately. Runs on **Windows 10+** and **macOS 12+**, and
 on both **Pro and Max** (metrics a plan doesn't report show `--`).
 
@@ -86,7 +94,7 @@ on both **Pro and Max** (metrics a plan doesn't report show `--`).
 
 Or install the packaged file manually:
 
-1. **Stream Deck app 6.9+** installed (see [Requirements](#requirements)).
+1. **Stream Deck app 7.6+** installed (see [Requirements](#requirements)).
 2. Download `com.saeedkolivand.claude-usage.streamDeckPlugin` from the
    [latest release](https://github.com/saeedkolivand/claude-usage-streamdeck-plugin/releases/latest)
    and double-click it → **Install**.

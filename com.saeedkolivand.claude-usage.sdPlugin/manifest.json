@@ -11,7 +11,7 @@
   "Icon": "imgs/plugin-icon",
   "SDKVersion": 3,
   "Software": {
-    "MinimumVersion": "6.9"
+    "MinimumVersion": "7.6"
   },
   "OS": [
     {
@@ -62,6 +62,21 @@
           "Touch": "Force refresh"
         }
       },
+      "States": [
+        {
+          "Image": "imgs/actions/meter/key"
+        }
+      ]
+    },
+    {
+      "Name": "Usage Infobar",
+      "UUID": "com.saeedkolivand.claude-usage.infobar",
+      "Icon": "imgs/actions/meter/icon",
+      "Tooltip": "Stream Deck Neo infobar: the usage carousel (5-hour, weekly, model, summary) on the strip under the keys.",
+      "PropertyInspectorPath": "ui/inspector.html",
+      "Controllers": [
+        "Neo"
+      ],
       "States": [
         {
           "Image": "imgs/actions/meter/key"
