@@ -18,6 +18,7 @@ import {
   projectsDir,
   credentialsPath,
   keychainService,
+  keychainLookupArgs,
 } from "../src/usage-core";
 
 let home: string;
@@ -175,5 +176,17 @@ describe("keychain service name", () => {
       keychainService("/x/.claude-work", false),
       keychainService("/x/.claude-personal", false),
     );
+  });
+});
+
+describe("Keychain account isolation", () => {
+  test("qualifies duplicate services by account without shell interpolation", () => {
+    const args = keychainLookupArgs("Claude Code-credentials", "user with spaces");
+    assert.deepEqual(args, ["find-generic-password", "-s", "Claude Code-credentials", "-a", "user with spaces", "-w"]);
+    assert.notDeepEqual(args, keychainLookupArgs("Claude Code-credentials", "root"));
+  });
+  test("preserves relocated profile service names", () => {
+    const service = keychainService("/x/.claude-work", false);
+    assert.equal(keychainLookupArgs(service, "user")[2], service);
   });
 });
