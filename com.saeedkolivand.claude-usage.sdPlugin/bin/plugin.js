@@ -17566,9 +17566,12 @@ function readTokenFromFile(path5) {
     return {};
   }
 }
+function keychainLookupArgs(service, account = (0, import_node_os.userInfo)().username) {
+  return ["find-generic-password", "-s", service, "-a", account, "-w"];
+}
 function readTokenFromKeychain(service) {
   try {
-    const out = (0, import_node_child_process.execFileSync)("security", ["find-generic-password", "-s", service, "-w"], {
+    const out = (0, import_node_child_process.execFileSync)("security", keychainLookupArgs(service), {
       encoding: "utf8",
       timeout: 4e3
     });
