@@ -1615,12 +1615,20 @@ export function svgInfobar(opts: {
 }
 
 /** The summary face: one column per window the user ticked (1–3), each with
- *  its label, % and bar, so every window reads at a glance. Countdowns and page
- *  dots stay on the number faces — three columns leave no room for them. */
+ *  its label, % and bar, so every window reads at a glance. */
 export function svgInfobarSummary(opts: {
   bg?: string;
   show: InfobarShow;
-  cols: { label: string; pct: number | null; col: string; accent: string; icon: FaceIcon }[];
+  cols: {
+    label: string;
+    pct: number | null;
+    col: string;
+    accent: string;
+    icon: FaceIcon;
+    note: string;
+    noteCol: string;
+    stale: boolean;
+  }[];
 }): string {
   const n = opts.cols.length;
   let body: string;
@@ -1632,14 +1640,19 @@ export function svgInfobarSummary(opts: {
     const pad = 5;
     const w = colW - 2 * pad;
     const pctSize = n >= 3 ? 20 : 22;
+    const roomForCountdown = n <= 2;
+    const noteSize = 11;
     body = opts.cols
       .map((c, i) => {
         const x0 = i * colW + pad;
         const divider = i ? `<rect x="${(i * colW - 0.5).toFixed(1)}" y="8" width="1" height="34" fill="#2a313d"/>` : "";
-        // The label gets the whole top row — at three columns that row is the
-        // tightest spot on the strip — so the icon sits beside the % instead.
+        const note = opts.show.countdown && roomForCountdown ? c.note : "";
+        const noteW = note ? textWidthEm(note) * noteSize * 1.08 + 6 : 0;
         let labelSize = 12;
-        while (labelSize > 9 && textWidthEm(c.label) * labelSize * 1.08 > w) labelSize -= 1;
+        while (labelSize > 9 && textWidthEm(c.label) * labelSize * 1.08 > w - noteW) labelSize -= 1;
+        const countdown = note
+          ? `<text x="${(x0 + w).toFixed(1)}" y="13" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${c.stale ? "#f59e0b" : c.noteCol}">${esc(note)}</text>`
+          : "";
         const icon = opts.show.icon ? iconMarkup(c.icon, x0, 22, 14, c.accent) : "";
         const pctX = icon ? x0 + 18 : x0;
         const pctNum = c.pct == null ? "--" : `${Math.round(c.pct)}`;
@@ -1652,6 +1665,7 @@ export function svgInfobarSummary(opts: {
         return (
           divider +
           `<text x="${x0.toFixed(1)}" y="13" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${c.accent}">${esc(c.label)}</text>` +
+          countdown +
           icon +
           `<text x="${pctX.toFixed(1)}" y="36" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${c.col}">${esc(pctNum)}${c.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>` +
           bar
