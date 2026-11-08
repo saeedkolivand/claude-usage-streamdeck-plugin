@@ -111,11 +111,16 @@ describe("infobar summary face", () => {
     assert.doesNotMatch(svgInfobarSummary({ show: { ...ALL_ON, icon: false }, cols }), /<g transform/);
   });
 
-  test("with one or two windows each column shows its time until reset, beside the label", () => {
+  test("with one or two windows each column shows its time until reset, right of the %", () => {
     const two = svgInfobarSummary({ show: ALL_ON, cols: cols.slice(0, 2) });
     assert.equal(count(two, 'font-weight="700" fill="#f5d0fe">2h 10m<'), 2);
-    assert.match(two, /<text x="111.0" y="13" text-anchor="end"[^>]*>2h 10m</);
+    assert.match(two, /<text x="111.0" y="36" text-anchor="end"[^>]*>2h 10m</);
     assert.match(svgInfobarSummary({ show: ALL_ON, cols: cols.slice(0, 1) }), />2h 10m</);
+  });
+
+  test("with one or two windows the icon moves up beside the label, freeing the % row", () => {
+    assert.match(svgInfobarSummary({ show: ALL_ON, cols: cols.slice(0, 2) }), /<g transform="translate\(5 2\)/);
+    assert.match(svgInfobarSummary({ show: ALL_ON, cols }), /<g transform="translate\(5 22\)/);
   });
 
   test("three columns leave no room for the time until reset", () => {
@@ -127,12 +132,13 @@ describe("infobar summary face", () => {
     assert.match(svgInfobarSummary({ show: ALL_ON, cols: [{ ...col("5 HOURS", 42), stale: true }] }), /fill="#f59e0b">2h 10m</);
   });
 
-  test("a label that would run into the time until reset steps down", () => {
-    const label = (svg: string) => Number(svg.match(/font-size="(\d+)" font-weight="700" fill="#e879f9">5 HOURS</)![1]);
+  test("the time until reset reads larger than the label and steps down only when the % would touch it", () => {
+    const size = (svg: string, text: string) => Number(svg.match(new RegExp(`font-size="(\\d+)" font-weight="700" fill="[^"]+">${text}<`))![1]);
     const roomy = svgInfobarSummary({ show: ALL_ON, cols: [col("5 HOURS", 42), col("WEEKLY", 1)] });
-    const tight = svgInfobarSummary({ show: ALL_ON, cols: [{ ...col("5 HOURS", 42), note: "23h 59m" }, col("WEEKLY", 1)] });
-    assert.equal(label(roomy), 12);
-    assert.ok(label(tight) < 12);
+    const tight = svgInfobarSummary({ show: ALL_ON, cols: [{ ...col("5 HOURS", 100), note: "23h 59m" }, col("WEEKLY", 1)] });
+    assert.ok(size(roomy, "2h 10m") > size(roomy, "5 HOURS"));
+    assert.ok(size(roomy, "5 HOURS") > 12);
+    assert.ok(size(tight, "23h 59m") < size(roomy, "2h 10m"));
   });
 
   test("no window ticked leaves the plugin's mark rather than an empty strip", () => {
