@@ -11,7 +11,7 @@ import {
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 export const ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
@@ -250,9 +250,15 @@ function readTokenFromFile(path: string): { token?: string; expired?: boolean } 
   }
 }
 
+/** Match both service and the current OS account. A service-only
+ * lookup can select another user's MCP-only item with the same service name. */
+export function keychainLookupArgs(service: string, account = userInfo().username): string[] {
+  return ["find-generic-password", "-s", service, "-a", account, "-w"];
+}
+
 function readTokenFromKeychain(service: string): { token?: string; expired?: boolean } {
   try {
-    const out = execFileSync("security", ["find-generic-password", "-s", service, "-w"], {
+    const out = execFileSync("security", keychainLookupArgs(service), {
       encoding: "utf8",
       timeout: 4000,
     });
