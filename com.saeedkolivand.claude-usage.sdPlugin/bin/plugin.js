@@ -18419,18 +18419,26 @@ function svgInfobarSummary(opts) {
     const pad = 5;
     const w = colW - 2 * pad;
     const pctSize = n >= 3 ? 20 : 22;
+    const roomForCountdown = n <= 2;
     body = opts.cols.map((c, i) => {
       const x0 = i * colW + pad;
       const divider = i ? `<rect x="${(i * colW - 0.5).toFixed(1)}" y="8" width="1" height="34" fill="#2a313d"/>` : "";
-      let labelSize = 12;
-      while (labelSize > 9 && textWidthEm(c.label) * labelSize * 1.08 > w) labelSize -= 1;
-      const icon = opts.show.icon ? iconMarkup(c.icon, x0, 22, 14, c.accent) : "";
-      const pctX = icon ? x0 + 18 : x0;
+      const iconBesideLabel = opts.show.icon && roomForCountdown;
+      const icon = !opts.show.icon ? "" : iconBesideLabel ? iconMarkup(c.icon, x0, 2, 13, c.accent) : iconMarkup(c.icon, x0, 22, 14, c.accent);
+      const labelX = iconBesideLabel ? x0 + 17 : x0;
+      let labelSize = roomForCountdown ? 13 : 12;
+      while (labelSize > 9 && textWidthEm(c.label) * labelSize * 1.08 > x0 + w - labelX) labelSize -= 1;
+      const pctX = icon && !iconBesideLabel ? x0 + 18 : x0;
       const pctNum = c.pct == null ? "--" : `${Math.round(c.pct)}`;
+      const pctEnd = pctX + (textWidthEm(pctNum) * pctSize + (c.pct == null ? 0 : textWidthEm("%") * Math.round(pctSize * 0.5))) * 1.08;
+      const note = opts.show.countdown && roomForCountdown ? c.note : "";
+      let noteSize = 15;
+      while (noteSize > 10 && textWidthEm(note) * noteSize * 1.08 > x0 + w - pctEnd - 6) noteSize -= 1;
+      const countdown = note ? `<text x="${(x0 + w).toFixed(1)}" y="36" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="${noteSize}" font-weight="700" fill="${c.stale ? "#f59e0b" : c.noteCol}">${esc2(note)}</text>` : "";
       const p = c.pct == null ? 0 : Math.max(0, Math.min(100, c.pct));
       const fillW = p / 100 * w;
       const bar = opts.show.bar ? `<rect x="${x0.toFixed(1)}" y="42" width="${w.toFixed(1)}" height="4" rx="2" fill="#2a313d"/>` + (fillW > 0 ? `<rect x="${x0.toFixed(1)}" y="42" width="${fillW.toFixed(1)}" height="4" rx="2" fill="${c.col}"/>` : "") : "";
-      return divider + `<text x="${x0.toFixed(1)}" y="13" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${c.accent}">${esc2(c.label)}</text>` + icon + `<text x="${pctX.toFixed(1)}" y="36" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${c.col}">${esc2(pctNum)}${c.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>` + bar;
+      return divider + `<text x="${labelX.toFixed(1)}" y="13" font-family="Arial, Helvetica, sans-serif" font-size="${labelSize}" font-weight="700" fill="${c.accent}">${esc2(c.label)}</text>` + icon + `<text x="${pctX.toFixed(1)}" y="36" font-family="Arial, Helvetica, sans-serif" font-size="${pctSize}" font-weight="800" fill="${c.col}">${esc2(pctNum)}${c.pct == null ? "" : `<tspan font-size="${Math.round(pctSize * 0.5)}" font-weight="700">%</tspan>`}</text>` + countdown + bar;
     }).join("\n  ");
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="232" height="50" viewBox="0 0 232 50">

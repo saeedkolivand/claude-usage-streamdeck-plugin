@@ -60,8 +60,9 @@ infobar under the keys — the same faces, order, timing, labels and colors as a
 carousel key, laid out for the 232×50 strip. Icon, bar, countdown and page dots
 can each be switched off. In place of the badge, the infobar has a **Summary**
 face that lays the windows you tick (5-hour, weekly, model) side by side, each
-with its % and bar. The infobar takes no input, so a window crossing Red jumps
-to its face for one interval instead of flashing.
+with its % and bar, plus the time until reset when one or two are ticked. The
+infobar takes no input, so a window crossing Red jumps to its face for one
+interval instead of flashing.
 
 Every poll also writes `~/.claude-usage/stats.json` — all profiles' live
 limits, token/cost totals and burn rate in one machine-readable file, for OBS
