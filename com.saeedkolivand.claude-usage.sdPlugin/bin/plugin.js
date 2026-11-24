@@ -3265,7 +3265,7 @@ var require_stream = __commonJS({
       };
       duplex._final = function(callback) {
         if (ws.readyState === ws.CONNECTING) {
-          ws.once("open", function open() {
+          ws.once("open", function open2() {
             duplex._final(callback);
           });
           return;
@@ -3286,7 +3286,7 @@ var require_stream = __commonJS({
       };
       duplex._write = function(chunk, encoding, callback) {
         if (ws.readyState === ws.CONNECTING) {
-          ws.once("open", function open() {
+          ws.once("open", function open2() {
             duplex._write(chunk, encoding, callback);
           });
           return;
@@ -17870,12 +17870,92 @@ async function listJsonl(dir) {
     } else if (ent.isFile() && ent.name.endsWith(".jsonl")) {
       try {
         const s = await (0, import_promises2.stat)(full);
-        res.push({ path: full, mtime: s.mtimeMs });
+        res.push({ path: full, mtime: s.mtimeMs, size: s.size });
       } catch {
       }
     }
   }
   return res;
+}
+var fileCaches = /* @__PURE__ */ new Map();
+function entryFromLine(line) {
+  if (!line) return null;
+  let e;
+  try {
+    e = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (e?.type !== "assistant" || !e?.message?.usage) return null;
+  const u = e.message.usage;
+  const model = e.message.model || "";
+  return {
+    id: e.requestId || e.message.id || "",
+    ts: e.timestamp ? Date.parse(e.timestamp) : NaN,
+    tokens: num(u.input_tokens, 0) + num(u.output_tokens, 0) + num(u.cache_creation_input_tokens, 0) + num(u.cache_read_input_tokens, 0),
+    cost: typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model)
+  };
+}
+function parseChunk(text, into) {
+  for (const line of text.split("\n")) {
+    const entry = entryFromLine(line);
+    if (entry) into.push(entry);
+  }
+}
+async function readEntries(path5, size, mtime) {
+  const cached2 = fileCaches.get(path5);
+  if (cached2 && cached2.size === size && cached2.mtime === mtime) return cached2;
+  let fh;
+  try {
+    fh = await (0, import_promises2.open)(path5, "r");
+  } catch {
+    return null;
+  }
+  try {
+    let start = 0;
+    let entries = [];
+    if (cached2 && size >= cached2.offset && cached2.offset > 0) {
+      const probe = Buffer.alloc(1);
+      const { bytesRead } = await fh.read(probe, 0, 1, cached2.offset - 1);
+      if (bytesRead === 1 && probe[0] === 10) {
+        start = cached2.offset;
+        entries = cached2.entries;
+      }
+    }
+    const len = size - start;
+    const buf = Buffer.alloc(len);
+    let got = 0;
+    while (got < len) {
+      const { bytesRead } = await fh.read(buf, got, len - got, start + got);
+      if (bytesRead === 0) break;
+      got += bytesRead;
+    }
+    const data = got === len ? buf : buf.subarray(0, got);
+    const lastNl = data.lastIndexOf(10);
+    const complete = lastNl >= 0 ? data.subarray(0, lastNl + 1) : data.subarray(0, 0);
+    const rest = lastNl >= 0 ? data.subarray(lastNl + 1) : data;
+    parseChunk(complete.toString("utf8"), entries);
+    const tail = [];
+    parseChunk(rest.toString("utf8"), tail);
+    const next = {
+      size: start + got,
+      mtime,
+      offset: start + complete.length,
+      entries,
+      tail
+    };
+    fileCaches.set(path5, next);
+    return next;
+  } catch {
+    return null;
+  } finally {
+    await fh.close().catch(() => {
+    });
+  }
+}
+function* allEntries(c) {
+  yield* c.entries;
+  yield* c.tail;
 }
 async function getLogStats(force = false, configDir) {
   const now = Date.now();
@@ -17918,29 +17998,17 @@ async function getLogStats(force = false, configDir) {
   const perDay = {};
   const recentStartMs = now - 30 * 6e4;
   let recentTokens = 0;
+  const visited = /* @__PURE__ */ new Set();
   for (const f of files) {
     if (f.mtime < startOfWeekMs && f.path !== sessionPath) continue;
-    let text;
-    try {
-      text = await (0, import_promises2.readFile)(f.path, "utf8");
-    } catch {
-      continue;
-    }
-    for (const line of text.split("\n")) {
-      if (!line) continue;
-      let e;
-      try {
-        e = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      if (e?.type !== "assistant" || !e?.message?.usage) continue;
-      const u = e.message.usage;
-      const model = e.message.model || "";
-      const key2 = e.requestId || e.message.id || "";
-      const tokens = num(u.input_tokens, 0) + num(u.output_tokens, 0) + num(u.cache_creation_input_tokens, 0) + num(u.cache_read_input_tokens, 0);
-      const cost = typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model);
-      const ts = e.timestamp ? Date.parse(e.timestamp) : NaN;
+    const parsed = await readEntries(f.path, f.size, f.mtime);
+    if (!parsed) continue;
+    visited.add(f.path);
+    for (const entry of allEntries(parsed)) {
+      const key2 = entry.id;
+      const tokens = entry.tokens;
+      const cost = entry.cost;
+      const ts = entry.ts;
       if (!Number.isNaN(ts)) {
         const day = dayKey(ts);
         const kd = "d:" + day + ":" + key2;
@@ -17985,6 +18053,10 @@ async function getLogStats(force = false, configDir) {
         }
       }
     }
+  }
+  const root = projectsDir(key) + import_node_path6.sep;
+  for (const path5 of fileCaches.keys()) {
+    if (path5.startsWith(root) && !visited.has(path5)) fileCaches.delete(path5);
   }
   writeHistory(key, mergeHistory(readHistory(key), perDay, dayKey(startOfWeekMs)));
   out.burnTokensPerMin = Math.round(recentTokens / 30);
