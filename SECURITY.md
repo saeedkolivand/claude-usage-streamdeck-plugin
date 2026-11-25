@@ -45,4 +45,4 @@ These are known characteristics, not vulnerabilities:
 - **Cost figures are estimates.** They're parsed from local logs and are notional
   "equivalent API spend" on Pro/Max plans, not a real charge.
 - A key showing `open Claude`, `offline`, or `--` is expected behavior, not a
-  security flaw — see the README *Notes & gotchas*.
+  security flaw — see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#notes--gotchas).

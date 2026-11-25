@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Before filing: a key reading **"open Claude"**, **"offline"**, or **"--"** is often expected
-        (token needs a refresh, no network, or a metric your plan doesn't report). See the README
+        (token needs a refresh, no network, or a metric your plan doesn't report). See TROUBLESHOOTING.md,
         Notes & gotchas first.
   - type: checkboxes
     id: prereqs

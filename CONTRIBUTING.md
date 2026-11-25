@@ -6,7 +6,7 @@ This is a small, focused project, so the workflow is light.
 ## Ways to help
 
 - **Report a bug** or **request a metric/feature** via the issue templates.
-- **Improve the docs** (README, this file).
+- **Improve the docs** (README, CONFIGURATION, TROUBLESHOOTING, this file).
 - **Send a pull request** for a fix or a new metric.
 
 By participating you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -19,6 +19,8 @@ src/usage-core.ts   data + rendering logic (no Stream Deck SDK dependency):
                     token/cost parser, and the SVG renderers
 src/plugin.ts       Stream Deck wiring: the action, the 60s refresh loop, and
                     force-refresh-on-press
+scripts/
+  make-preview.ts   renders docs/preview.png (README banner) from the real key faces
 com.saeedkolivand.claude-usage.sdPlugin/
   manifest.json     plugin + action definition (Node 20 runtime, Windows + macOS)
   bin/plugin.js     bundled output — generated, committed, do not hand-edit
@@ -38,7 +40,15 @@ npm install
 npm run typecheck  # tsc -p tsconfig.json (esbuild strips types without checking them)
 npm test           # node:test
 npm run build      # esbuild bundles src/plugin.ts -> bin/plugin.js
+npm run preview    # regenerate docs/preview.png (README banner) from the real key faces
+python3 make_icons.py   # only if you change the icon art (needs Pillow: pip install pillow)
 ```
+
+The commands are identical on Windows (PowerShell), macOS, and Linux.
+
+To tweak the gauge look edit `svgKey`, the token/cost tiles edit `svgStat`, and
+the cost fallback rates edit `PRICING`, all in `src/usage-core.ts`. Metric
+definitions live in `METRICS` there and the `LOG_METRICS` set in `src/plugin.ts`.
 
 `bin/plugin.js` is the artifact the Stream Deck app actually runs, and it **is
 committed**. Always edit the TypeScript in `src/`, then re-run `npm run build` so
