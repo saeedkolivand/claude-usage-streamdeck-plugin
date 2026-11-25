@@ -9,10 +9,10 @@ import {
   mkdirSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { open, readdir, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { homedir, userInfo } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 
 export const ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
 export const DEFAULT_UA = "claude-code/2.0.31";
@@ -701,8 +701,8 @@ export function projectsDir(configDir = defaultConfigDir()): string {
 const logCaches = new Map<string, { at: number; data: LogStats }>();
 const LOG_TTL_MS = 30_000;
 
-async function listJsonl(dir: string): Promise<{ path: string; mtime: number }[]> {
-  const res: { path: string; mtime: number }[] = [];
+async function listJsonl(dir: string): Promise<{ path: string; mtime: number; size: number }[]> {
+  const res: { path: string; mtime: number; size: number }[] = [];
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -716,13 +716,130 @@ async function listJsonl(dir: string): Promise<{ path: string; mtime: number }[]
     } else if (ent.isFile() && ent.name.endsWith(".jsonl")) {
       try {
         const s = await stat(full);
-        res.push({ path: full, mtime: s.mtimeMs });
+        res.push({ path: full, mtime: s.mtimeMs, size: s.size });
       } catch {
         /* skip unreadable file */
       }
     }
   }
   return res;
+}
+
+// ---------------------------------------------------------------------------
+// Incremental transcript parsing. Transcripts are append-only JSONL and a
+// busy week easily adds up to gigabytes, so re-reading every file on each
+// 60 s tick kept a core busy. Each file's usage entries are parsed once and
+// cached; later ticks read only the bytes appended since the last pass.
+// ---------------------------------------------------------------------------
+type LogEntry = { id: string; ts: number; tokens: number; cost: number };
+
+type FileCache = {
+  size: number;
+  mtime: number;
+  offset: number; // byte offset just past the last complete line parsed
+  entries: LogEntry[]; // entries from complete lines only
+  tail: LogEntry[]; // entries from a trailing line without "\n" yet
+};
+
+// Keyed by absolute file path, so profiles sharing nothing never collide.
+const fileCaches = new Map<string, FileCache>();
+
+function entryFromLine(line: string): LogEntry | null {
+  if (!line) return null;
+  let e: any;
+  try {
+    e = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (e?.type !== "assistant" || !e?.message?.usage) return null;
+  const u = e.message.usage as Record<string, unknown>;
+  const model = (e.message.model as string) || "";
+  return {
+    id: e.requestId || e.message.id || "",
+    ts: e.timestamp ? Date.parse(e.timestamp) : NaN,
+    tokens:
+      num(u.input_tokens, 0) +
+      num(u.output_tokens, 0) +
+      num(u.cache_creation_input_tokens, 0) +
+      num(u.cache_read_input_tokens, 0),
+    cost: typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model),
+  };
+}
+
+function parseChunk(text: string, into: LogEntry[]): void {
+  for (const line of text.split("\n")) {
+    const entry = entryFromLine(line);
+    if (entry) into.push(entry);
+  }
+}
+
+/** Usage entries of one transcript, reading only what changed since the
+ *  last call. Returns null when the file can't be read. */
+async function readEntries(path: string, size: number, mtime: number): Promise<FileCache | null> {
+  const cached = fileCaches.get(path);
+  if (cached && cached.size === size && cached.mtime === mtime) return cached;
+
+  let fh;
+  try {
+    fh = await open(path, "r");
+  } catch {
+    return null;
+  }
+  try {
+    let start = 0;
+    let entries: LogEntry[] = [];
+    // Append-only growth: continue from the last complete line, after
+    // checking the byte before it is still a newline. Anything else
+    // (truncation, rewrite) falls back to a full re-parse.
+    if (cached && size >= cached.offset && cached.offset > 0) {
+      const probe = Buffer.alloc(1);
+      const { bytesRead } = await fh.read(probe, 0, 1, cached.offset - 1);
+      if (bytesRead === 1 && probe[0] === 0x0a) {
+        start = cached.offset;
+        entries = cached.entries;
+      }
+    }
+
+    const len = size - start;
+    const buf = Buffer.alloc(len);
+    let got = 0;
+    while (got < len) {
+      const { bytesRead } = await fh.read(buf, got, len - got, start + got);
+      if (bytesRead === 0) break;
+      got += bytesRead;
+    }
+    const data = got === len ? buf : buf.subarray(0, got);
+
+    // Split at the last newline byte; UTF-8 never uses 0x0a inside a
+    // multi-byte sequence, so both halves decode cleanly.
+    const lastNl = data.lastIndexOf(0x0a);
+    const complete = lastNl >= 0 ? data.subarray(0, lastNl + 1) : data.subarray(0, 0);
+    const rest = lastNl >= 0 ? data.subarray(lastNl + 1) : data;
+
+    parseChunk(complete.toString("utf8"), entries);
+    const tail: LogEntry[] = [];
+    parseChunk(rest.toString("utf8"), tail);
+
+    const next: FileCache = {
+      size: start + got,
+      mtime,
+      offset: start + complete.length,
+      entries,
+      tail,
+    };
+    fileCaches.set(path, next);
+    return next;
+  } catch {
+    return null;
+  } finally {
+    await fh.close().catch(() => {});
+  }
+}
+
+function* allEntries(c: FileCache): Generator<LogEntry> {
+  yield* c.entries;
+  yield* c.tail;
 }
 
 export async function getLogStats(force = false, configDir?: string): Promise<LogStats> {
@@ -774,39 +891,21 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
   const recentStartMs = now - 30 * 60_000;
   let recentTokens = 0;
 
+  const visited = new Set<string>();
   for (const f of files) {
     // We need files touched within the last 7 days (covers today + week);
     // always read the session file regardless of when it was last touched.
     if (f.mtime < startOfWeekMs && f.path !== sessionPath) continue;
 
-    let text: string;
-    try {
-      text = await readFile(f.path, "utf8");
-    } catch {
-      continue;
-    }
+    const parsed = await readEntries(f.path, f.size, f.mtime);
+    if (!parsed) continue;
+    visited.add(f.path);
 
-    for (const line of text.split("\n")) {
-      if (!line) continue;
-      let e: any;
-      try {
-        e = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      if (e?.type !== "assistant" || !e?.message?.usage) continue;
-
-      const u = e.message.usage as Record<string, unknown>;
-      const model = (e.message.model as string) || "";
-      const key: string = e.requestId || e.message.id || "";
-      const tokens =
-        num(u.input_tokens, 0) +
-        num(u.output_tokens, 0) +
-        num(u.cache_creation_input_tokens, 0) +
-        num(u.cache_read_input_tokens, 0);
-      const cost = typeof e.costUSD === "number" ? e.costUSD : computeCost(u, model);
-
-      const ts = e.timestamp ? Date.parse(e.timestamp) : NaN;
+    for (const entry of allEntries(parsed)) {
+      const key = entry.id;
+      const tokens = entry.tokens;
+      const cost = entry.cost;
+      const ts = entry.ts;
       if (!Number.isNaN(ts)) {
         const day = dayKey(ts);
         const kd = "d:" + day + ":" + key;
@@ -854,6 +953,13 @@ export async function getLogStats(force = false, configDir?: string): Promise<Lo
         }
       }
     }
+  }
+
+  // Drop parsed files of this profile that aged out of the window or vanished,
+  // so the cache stays bounded to what the next tick will read again.
+  const root = projectsDir(key) + sep;
+  for (const path of fileCaches.keys()) {
+    if (path.startsWith(root) && !visited.has(path)) fileCaches.delete(path);
   }
 
   // Persist per-day totals so charts survive Claude Code pruning old logs.
